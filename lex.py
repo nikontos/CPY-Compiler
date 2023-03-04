@@ -39,6 +39,7 @@ class Lex:
                 return 'EOF'
             elif char == '\n':
                 self.current_line = self.current_line + 1
+                self.file.seek(self.position)
                 continue
             elif char == " ":
                 continue
@@ -51,13 +52,17 @@ class Lex:
                     if char not in self.digits or char == '' or char == ' ':
                         self.state = 'terminal'
                         # the -1 on position is very imporant to not consume the next char
-                        self.file.seek(self.position)
+                        self.file.seek(self.position-1)
                         if char not in self.digits and char != '' and char != '\n':
                             self.__error()
                             break
+                        # i have no idea how this condition fixed all this crap
+                        if char == '':
+                            self.file.seek(self.position)
                         if self.__len_test() == 0 or int(self.recognised_string) > 9999:
                             print("Error too large number")
                             break
+
                         return token.Token(self.recognised_string, "dig", self.current_line)
                     self.recognised_string = self.recognised_string + char
 
