@@ -79,15 +79,33 @@ class Lex:
                 return self.relation_op_token()
             elif self.char == '=' and self.state == 'start':
                 return self.assign_token()
+            elif self.char in self.num_op or self.char == '/' and self.state == 'start':
+                return self.num_op_token()
 
     def __error(self):
-        print("There was an error at " + self.file_name + " @Line : " + str(self.current_line) + " @Pos: " + str(
-            self.position))
+        print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
 
     def __len_test(self):
         if len(self.recognised_string) > 30:
             return 0
         return 1
+
+    def num_op_token(self):
+        if self.char == '+':
+            return Token(self.char, 'addOP', self.current_line)
+        elif self.char == '-':
+            return Token(self.char, 'minusOP', self.current_line)
+        elif self.char == '*':
+            return Token(self.char, 'multiOP', self.current_line)
+        elif self.char == '/':
+            self.char = self.file.read(1)
+            if self.char == '/':
+                return Token(self.char, 'divisionOP', self.current_line)
+            else:
+                self.position = self.file.tell()
+                self.file.seek(self.position - 1)
+                print("Expected // Division")
+                self.__error()
 
     def assign_token(self):
         self.state = 'asgn'
