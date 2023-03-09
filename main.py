@@ -75,7 +75,7 @@ class Lex:
                 return self.rem()
             elif self.char in self.delimiter_op and self.state == 'start':
                 return self.delimeter_token()
-            elif self.char in self.relation_op and self.state == 'start':
+            elif (self.char in self.relation_op or self.char == '!') and self.state == 'start':
                 return self.relation_op_token()
             elif self.char == '=' and self.state == 'start':
                 return self.assign_token()
@@ -90,17 +90,21 @@ class Lex:
             return 0
         return 1
 
+
+    
     def num_op_token(self):
+        self.recognised_string += self.char
         if self.char == '+':
-            return Token(self.char, 'addOP', self.current_line)
+            return Token(self.recognised_string, 'addOP', self.current_line)
         elif self.char == '-':
-            return Token(self.char, 'minusOP', self.current_line)
+            return Token(self.recognised_string, 'minusOP', self.current_line)
         elif self.char == '*':
-            return Token(self.char, 'multiOP', self.current_line)
+            return Token(self.recognised_string, 'multiOP', self.current_line)
         elif self.char == '/':
+            self.recognised_string += self.char
             self.char = self.file.read(1)
             if self.char == '/':
-                return Token(self.char, 'divisionOP', self.current_line)
+                return Token(self.recognised_string, 'divisionOP', self.current_line)
             else:
                 self.position = self.file.tell()
                 self.file.seek(self.position - 1)
@@ -114,7 +118,7 @@ class Lex:
         self.position = self.file.tell()
         if self.char == '=':
             self.recognised_string += self.char
-            return Token(self.recognised_string, 'relOP', self.current_line)
+            return Token(self.recognised_string, 'isEqual', self.current_line)
         else:
             self.file.seek(self.position - 1)
             return Token(self.recognised_string, 'asgn', self.current_line)
@@ -122,13 +126,37 @@ class Lex:
     def relation_op_token(self):
         self.recognised_string += self.char
         self.char = self.file.read(1)
-        self.position = self.file.tell()
-        if self.char in self.relation_op or self.char == '=':
-            self.recognised_string += self.char
-            return Token(self.recognised_string, 'relOP', self.current_line)
-        self.position -= 1
-        self.file.seek(self.position)
-        return Token(self.recognised_string, 'relOP', self.current_line)
+        if self.char == '<':
+            self.char = self.file.read(1)
+            self.position = self.file.tell()
+            if self.char == '=':
+                self.recognised_string += self.char
+                return Token (self.recognised_string, 'lessEqual', self.current_line)
+            else:
+                self.file.seek(self.position - 1)
+                return Token(self.recognised_string, 'lessThan', self.current_line)
+        if self.char == '>':
+            self.char = self.file.read(1)
+            self.position = self.file.tell()
+            if self.char == '=':
+                self.recognised_string += self.char
+                return Token(self.recognised_string, 'greaterEqual', self.current_line)
+            else:
+                self.file.seek(self.position - 1)
+                return Token(self.recognised_string, 'greaterThan', self.current_line)
+        if self.char == '!':
+            self.char = self.file.read(1)
+            self.position = self.file.tell()
+            if self.char == '=':
+                self.recognised_string += self.char
+                return Token (self.recognised_string, 'notEqual', self.current_line)
+            else:
+                self.recognised_string += self.char
+                self.file.seek(self.position - 1)
+                print("Expected ! instead found : " +self.recognised_string)
+                self.__error()
+
+
 
     def delimeter_token(self):
         self.recognised_string += self.char
