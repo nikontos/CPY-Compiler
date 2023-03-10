@@ -15,8 +15,10 @@ class Token:
     # def __init__(self):
     #    pass
 
+
     def __str__(self):
-        print(self.recognised_string + " Family: " + self.family + " Line: " + str(self.line_number))
+        print_at_line = "at line"
+        print(f"{self.recognised_string : <30} {self.family :<25} {print_at_line: <7} {self.line_number: >4}")
         pass
 
 
