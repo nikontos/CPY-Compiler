@@ -15,7 +15,6 @@ class Token:
     # def __init__(self):
     #    pass
 
-
     def __str__(self):
         print_at_line = "at line"
         print(f"{self.recognised_string : <30} {self.family :<25} {print_at_line: <7} {self.line_number: >4}")
@@ -87,13 +86,16 @@ class Lex:
     def __error(self):
         print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
 
+    def error(self,output):
+        print(output)
+
+
+
     def __len_test(self):
         if len(self.recognised_string) > 30:
             return 0
         return 1
 
-
-    
     def num_op_token(self):
         self.recognised_string += self.char
         if self.char == '+':
@@ -133,7 +135,7 @@ class Lex:
             self.position = self.file.tell()
             if self.char == '=':
                 self.recognised_string += self.char
-                return Token (self.recognised_string, 'lessEqual', self.current_line)
+                return Token(self.recognised_string, 'lessEqual', self.current_line)
             else:
                 self.file.seek(self.position - 1)
                 return Token(self.recognised_string, 'lessThan', self.current_line)
@@ -151,14 +153,12 @@ class Lex:
             self.position = self.file.tell()
             if self.char == '=':
                 self.recognised_string += self.char
-                return Token (self.recognised_string, 'notEqual', self.current_line)
+                return Token(self.recognised_string, 'notEqual', self.current_line)
             else:
                 self.recognised_string += self.char
                 self.file.seek(self.position - 1)
-                print("Expected ! instead found : " +self.recognised_string)
+                print("Expected ! instead found : " + self.recognised_string)
                 self.__error()
-
-
 
     def delimeter_token(self):
         self.recognised_string += self.char
@@ -178,9 +178,12 @@ class Lex:
                 if self.char == '#':
                     self.recognised_string += self.char
                     self.char = self.file.read(1)
+                    if self.char == '\n':
+                        self.current_line += 1
                     if self.char == '$':
-                        self.recognised_string += self.char
-                        return Token(self.recognised_string, 'comments', self.current_line)
+                        self.recognised_string = ''
+                        # this return statement is used to ignore the comments
+                        return self.next_token()
                     self.file.seek(self.position)
         elif self.char in self.grouping_symbols:
             self.grouping_symbol_token()
@@ -237,16 +240,62 @@ class Lex:
 
 
 class Syntax:
-    token = Lex('test.cpy')
-    token.next_token()
+    token = None
+
+    def __init__(self):
+        self.token = Lex('test.cpy')
+
+    def start_rule(self):
+        self.def_main_part()
+        self.call_main_part()
+
+    def def_main_part(self):
+        self.def_main_function()
+
+    def def_main_function(self):
+        tk = self.token.next_token()
+        if tk.recognised_string != 'def':
+            self.token.error('Expected keyword \'def\'')
+        tk = self.token.next_token()
+        if tk.family != 'var':
+            self.token.error('Expected keyword \'var\'')
+        tk = self.token.next_token()
+        if tk.recognised_string != '(':
+            self.token.error('Expected keyword \'(\'')
+        tk = self.token.next_token()
+        if tk.recognised_string != ')':
+            self.token.error('Expected keyword \')\'')
+        tk = self.token.next_token()
+        if tk.recognised_string != ':':
+            self.token.error('Expected keyword \'(:')
+        tk = self.token.next_token()
+        if tk.recognised_string != '#{':
+            self.token.error('Expected keyword \'#{\'')
+        tk = self.token.next_token()
+        self.declarations()
+        self.def_function()
+        self.statements()
+        if tk.recognised_string != '#}':
+            self.token.error('Expected keyword \'#}\'')
+        tk = self.token.next_token()
+        tk.__str__()
+
+
+
+    def def_function(self):
+        pass
+
+    def declarations(self):
+        pass
+
+    def call_main_part(self):
+        pass
+
+    def statements(self):
+        pass
 
 
 if __name__ == '__main__':
-    test = Lex('test.cpy')
-    b = test.next_token()
-    a = open('test', 'a')
+    test = Syntax()
+    test.start_rule()
 
-    while b != "EOF":
-        b.__str__()
-        b = test.next_token()
-    a.close()
