@@ -234,6 +234,11 @@ class Lex:
                 return Token(self.recognised_string, "dig", self.current_line)
 
 
+class Syntax:
+    token = Lex('test.cpy')
+    token.next_token()
+
+
 if __name__ == '__main__':
     test = Lex('test.cpy')
     b = test.next_token()
