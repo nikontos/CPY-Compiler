@@ -80,7 +80,6 @@ class Lex:
                 return 'EOF'
             elif self.char == '\n':
                 self.current_line += 1
-                self.file.seek(self.position)
                 continue
             elif self.char == " ":
                 continue
@@ -197,21 +196,26 @@ class Lex:
             while self.state == 'comment':
                 self.recognised_string += self.char
                 self.char = self.file.read(1)
-                self.position = self.file.tell()
+                print("Eimai stin "+str(self.current_line)+" Kai eida "+self.recognised_string)
+                if self.char == '\n':
+                    self.current_line += 1
                 if self.char == '#':
+                    print("Eida #")
                     self.recognised_string += self.char
                     self.char = self.file.read(1)
+                    if self.char == '\n':
+                        print("Eida new line")
+                        self.current_line += 1
                     if self.char == '$':
+                        print("Comment telos")
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
+                        print("************"+str(self.current_line)+"***************")
                         return self.next_token()
-                    self.file.seek(self.position)
         elif self.char in self.grouping_symbols:
-            self.grouping_symbol_token()
-            return Token(self.recognised_string, 'grouping', self.current_line)
+            return self.grouping_symbol_token()
         elif self.char in self.alphabet:
-            self.keyword_token()
-            return Token(self.recognised_string, 'declare', self.current_line)
+            return self.keyword_token()
 
     def grouping_symbol_token(self):
         # self.state = 'grouping_symbol'
@@ -219,18 +223,18 @@ class Lex:
         return Token(self.recognised_string, "grouping_symbol", self.current_line)
 
     def keyword_token(self):
+        print("Mpika Key kai eimai "+str(self.current_line))
         self.state = 'keyword'
         while self.state == 'keyword':
-            self.recognised_string = self.recognised_string + self.char
+            self.recognised_string += self.char
             self.char = self.file.read(1)
             self.position = self.file.tell()
 
             if (self.char not in self.alphabet and self.char not in self.digits) or self.char == '' or self.char == ' ':
                 self.state = 'terminal'
-                if self.recognised_string in self.keywords:
-                    self.file.seek(self.position - 1)
-                    return Token(self.recognised_string, "keyword", self.current_line)
                 self.file.seek(self.position - 1)
+                if self.recognised_string in self.keywords:
+                    return Token(self.recognised_string, "keyword", self.current_line)
                 return Token(self.recognised_string, "var", self.current_line)
 
     def digit_token(self):
@@ -265,7 +269,8 @@ class Syntax:
 
     def __init__(self):
         self.token = Lex('test.cpy')
-        self.tk = self.token(None, None, None)
+        self.tk = None
+
 
     ##############################################################
     #                                                            #
@@ -274,15 +279,15 @@ class Syntax:
     ##############################################################
 
     def check_string_not(self, expected_word):
-        tk = self.token.next_token()
-        tk.__str__()
-        if tk.recognised_string != expected_word:
+        self.tk = self.token.next_token()
+        self.tk.__str__()
+        if self.tk.recognised_string != expected_word:
             return True
         return False
 
     def check_family_not(self, expected_word):
-        tk = self.token.next_token()
-        if tk.family != expected_word:
+        self.tk = self.token.next_token()
+        if self.tk.family != expected_word:
             return True
         return False
 
@@ -306,14 +311,13 @@ class Syntax:
             self.token.error('Expected keyword \'(:')
         if self.check_string_not('#{'):
             self.token.error('Expected keyword \'#{\'')
-        tk = self.token.token_peak()
 
-        if tk.family == 'asgn':
-            self.declarations()
+        
+        self.declarations()
         # prepei na kanei sneak peak ena token gia na dei an tha mpei stin function
         # diaforetika katanalwnei token xwris logo
-        self.def_function()
-        self.statements()
+        # self.def_function()
+        # self.statements()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
@@ -327,13 +331,36 @@ class Syntax:
     # self.token.error('var')
 
     def declarations(self):
-        pass
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '#declare':
+            self.declaration_line()
+
+    def declaration_line(self):
+        if self.check_string_not('#declare'):
+            self.token.error('#declare')
+        self.id_list()
+
+    def id_list(self):
+        if self.check_family_not('var'):
+            self.token.error('var')
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == ',':
+            self.token.next_token()
+            self.id_list()
+
 
     def call_main_part(self):
         pass
 
     def statements(self):
         pass
+
+
+    ##############################################################
+    #                                                            #
+    #                     Program Starts Here                    #
+    #                                                            #
+    ##############################################################
 
 
 if __name__ == '__main__':
