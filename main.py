@@ -19,8 +19,12 @@ class Token:
         print_at_line = "at line"
         print(f"{self.recognised_string : <30} {self.family :<25} {print_at_line: <7} {self.line_number: >4}")
         pass
-
-
+#   ===========================================================
+#
+#
+#                       Lex
+#
+#   ===========================================================
 class Lex:
     state = ''
     digits = string.digits
@@ -87,9 +91,13 @@ class Lex:
         print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
 
     def error(self,output):
-        print(output)
+        print('Expected keyword \'' + output + '\'' + ' at ' + str(self.current_line))
 
-
+    def token_peak(self):
+        tmp_pos = self.file.tell()
+        tk = self.next_token()
+        self.file.seek(tmp_pos)
+        return tk
 
     def __len_test(self):
         if len(self.recognised_string) > 30:
@@ -245,6 +253,18 @@ class Syntax:
     def __init__(self):
         self.token = Lex('test.cpy')
 
+    def check_string_not(self,expected_word):
+        tk = self.token.next_token()
+        if tk.recognised_string != expected_word:
+            return True
+        return False
+
+    def check_family_not(self,expected_word):
+        tk = self.token.next_token()
+        if tk.family != expected_word:
+            return True
+        return False
+
     def start_rule(self):
         self.def_main_part()
         self.call_main_part()
@@ -253,37 +273,38 @@ class Syntax:
         self.def_main_function()
 
     def def_main_function(self):
-        tk = self.token.next_token()
-        if tk.recognised_string != 'def':
-            self.token.error('Expected keyword \'def\'')
-        tk = self.token.next_token()
-        if tk.family != 'var':
-            self.token.error('Expected keyword \'var\'')
-        tk = self.token.next_token()
-        if tk.recognised_string != '(':
+        if self.check_string_not('def'):
+            self.token.error('def')
+        if self.check_family_not('var'):
+            self.token.error('var')
+        if self.check_string_not('('):
             self.token.error('Expected keyword \'(\'')
-        tk = self.token.next_token()
-        if tk.recognised_string != ')':
+        if self.check_string_not(')'):
             self.token.error('Expected keyword \')\'')
-        tk = self.token.next_token()
-        if tk.recognised_string != ':':
+        if self.check_string_not(':'):
             self.token.error('Expected keyword \'(:')
-        tk = self.token.next_token()
-        if tk.recognised_string != '#{':
+        if self.check_string_not('#{'):
             self.token.error('Expected keyword \'#{\'')
-        tk = self.token.next_token()
-        self.declarations()
+        tk = self.token.token_peak()
+
+        if tk.family == 'asgn':
+            self.declarations()
+        # prepei na kanei sneak peak ena token gia na dei an tha mpei stin fucntion
+        # diaforetika katanalwnei token xwris logo
+        tk = self.token.token_peak()
         self.def_function()
         self.statements()
-        if tk.recognised_string != '#}':
+        if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
-        tk = self.token.next_token()
-        tk.__str__()
-
-
 
     def def_function(self):
-        pass
+        #if self.check_string_not('def'):
+            pass
+            #self.token.error('Expected keyword \'def\'')
+        #if self.check_family_not('var'):
+            #self.token.error('var')
+
+
 
     def declarations(self):
         pass
