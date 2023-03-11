@@ -19,12 +19,14 @@ class Token:
         print_at_line = "at line"
         print(f"{self.recognised_string : <30} {self.family :<25} {print_at_line: <7} {self.line_number: >4}")
         pass
-#   ===========================================================
-#
-#
-#                       Lex
-#
-#   ===========================================================
+
+    ##############################################################
+    #                                                            #
+    #                            Lex                             #
+    #                                                            #
+    ##############################################################
+
+
 class Lex:
     state = ''
     digits = string.digits
@@ -49,6 +51,18 @@ class Lex:
 
     def __del__(self):
         return
+
+    def token_sneak_peak(self):
+        tmp_pos = self.file.tell()
+        tmp_tk = self.next_token()
+        self.file.seek(tmp_pos)
+        return tmp_tk
+
+    def char_sneak_peak(self):
+        tmp_pos = self.file.tell()
+        tmp_char = self.file.read(1)
+        self.file.seek(tmp_pos)
+        return tmp_char
 
     def next_token(self):
         if not os.path.isfile(self.file_name):
@@ -90,7 +104,7 @@ class Lex:
     def __error(self):
         print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
 
-    def error(self,output):
+    def error(self, output):
         print('Expected keyword \'' + output + '\'' + ' at ' + str(self.current_line))
 
     def token_peak(self):
@@ -165,7 +179,7 @@ class Lex:
             else:
                 self.recognised_string += self.char
                 self.file.seek(self.position - 1)
-                print("Expected ! instead found : " + self.recognised_string)
+                print("Expected = instead found : " + self.recognised_string)
                 self.__error()
 
     def delimeter_token(self):
@@ -176,6 +190,7 @@ class Lex:
     def rem(self):
         self.recognised_string += self.char
         self.char = self.file.read(1)
+
         # comments state
         if self.char == '$':
             self.state = 'comment'
@@ -186,8 +201,6 @@ class Lex:
                 if self.char == '#':
                     self.recognised_string += self.char
                     self.char = self.file.read(1)
-                    if self.char == '\n':
-                        self.current_line += 1
                     if self.char == '$':
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
@@ -235,7 +248,7 @@ class Lex:
                         and self.char not in self.grouping_symbols and self.char not in self.delimiter_op:
                     self.__error()
                     break
-                # i have no idea how this condition fixed all this crap
+                # I have no idea how this condition fixed all this crap
                 if self.char == '':
                     self.file.seek(self.position)
                 if self.__len_test() == 0 or int(self.recognised_string) > 9999:
@@ -252,14 +265,22 @@ class Syntax:
 
     def __init__(self):
         self.token = Lex('test.cpy')
+        self.tk = self.token(None, None, None)
 
-    def check_string_not(self,expected_word):
+    ##############################################################
+    #                                                            #
+    #                     Syntax Functions                       #
+    #                                                            #
+    ##############################################################
+
+    def check_string_not(self, expected_word):
         tk = self.token.next_token()
+        tk.__str__()
         if tk.recognised_string != expected_word:
             return True
         return False
 
-    def check_family_not(self,expected_word):
+    def check_family_not(self, expected_word):
         tk = self.token.next_token()
         if tk.family != expected_word:
             return True
@@ -289,22 +310,21 @@ class Syntax:
 
         if tk.family == 'asgn':
             self.declarations()
-        # prepei na kanei sneak peak ena token gia na dei an tha mpei stin fucntion
+        # prepei na kanei sneak peak ena token gia na dei an tha mpei stin function
         # diaforetika katanalwnei token xwris logo
-        tk = self.token.token_peak()
         self.def_function()
         self.statements()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
     def def_function(self):
-        #if self.check_string_not('def'):
-            pass
-            #self.token.error('Expected keyword \'def\'')
-        #if self.check_family_not('var'):
-            #self.token.error('var')
+        # if self.check_string_not('def'):
+        pass
 
+    # self.token.error('Expected keyword \'def\'')
 
+    # if self.check_family_not('var'):
+    # self.token.error('var')
 
     def declarations(self):
         pass
@@ -319,4 +339,3 @@ class Syntax:
 if __name__ == '__main__':
     test = Syntax()
     test.start_rule()
-
