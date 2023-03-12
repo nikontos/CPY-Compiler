@@ -30,7 +30,7 @@ class Token:
 class Lex:
     state = ''
     digits = string.digits
-    keywords = ['if', 'while', 'def', 'return', 'int', 'print']
+    keywords = ['if', 'while', 'def', 'return', 'int', 'print', '#declare']
     alphabet = string.ascii_letters + '_'
     grouping_symbols = ['(', ')', '{', '}', '#{', '#}', '[', ']']
     num_op = ['+', '-', '*', '//']
@@ -53,9 +53,11 @@ class Lex:
         return
 
     def token_sneak_peak(self):
+        tmp_line = self.current_line
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
         self.file.seek(tmp_pos)
+        self.current_line = tmp_line
         return tmp_tk
 
     def char_sneak_peak(self):
@@ -196,21 +198,16 @@ class Lex:
             while self.state == 'comment':
                 self.recognised_string += self.char
                 self.char = self.file.read(1)
-                print("Eimai stin "+str(self.current_line)+" Kai eida "+self.recognised_string)
                 if self.char == '\n':
                     self.current_line += 1
                 if self.char == '#':
-                    print("Eida #")
                     self.recognised_string += self.char
                     self.char = self.file.read(1)
                     if self.char == '\n':
-                        print("Eida new line")
                         self.current_line += 1
                     if self.char == '$':
-                        print("Comment telos")
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
-                        print("************"+str(self.current_line)+"***************")
                         return self.next_token()
         elif self.char in self.grouping_symbols:
             return self.grouping_symbol_token()
@@ -223,7 +220,6 @@ class Lex:
         return Token(self.recognised_string, "grouping_symbol", self.current_line)
 
     def keyword_token(self):
-        print("Mpika Key kai eimai "+str(self.current_line))
         self.state = 'keyword'
         while self.state == 'keyword':
             self.recognised_string += self.char
@@ -271,7 +267,6 @@ class Syntax:
         self.token = Lex('test.cpy')
         self.tk = None
 
-
     ##############################################################
     #                                                            #
     #                     Syntax Functions                       #
@@ -287,6 +282,7 @@ class Syntax:
 
     def check_family_not(self, expected_word):
         self.tk = self.token.next_token()
+        self.tk.__str__()
         if self.tk.family != expected_word:
             return True
         return False
@@ -312,12 +308,16 @@ class Syntax:
         if self.check_string_not('#{'):
             self.token.error('Expected keyword \'#{\'')
 
-        
-        self.declarations()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#declare':
+                self.declarations()
+            else:
+                break
         # prepei na kanei sneak peak ena token gia na dei an tha mpei stin function
         # diaforetika katanalwnei token xwris logo
         # self.def_function()
-        # self.statements()
+        self.statements()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
@@ -348,21 +348,98 @@ class Syntax:
             self.token.next_token()
             self.id_list()
 
-
     def call_main_part(self):
         pass
 
     def statements(self):
+        self.statement()
+
+    def statement(self):
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.family == 'var' or tmp_tk.recognised_string == 'print' or tmp_tk.recognised_string == 'return':
+                self.simple_statement()
+            elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
+                self.structured_statement()
+            else:
+                self.token.error('Expected Statement')
+                break
+
+    def simple_statement(self):
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.family == 'var':
+            self.assignment_stat()
+        elif tmp_tk.recognised_string == 'print':
+            self.print_stat()
+        elif tmp_tk.recognised_string == 'return':
+            self.return_stat()
+        else:
+            self.token.error("Error in simple statement")
+
+    def structured_statement(self):
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'if':
+            self.if_stat()
+        elif tmp_tk.recognised_string == 'while':
+            self.while_stat()
+        else:
+            self.token.error('Expected if or while')
+
+    def assignment_stat(self):
+        if self.check_family_not('var'):
+            self.token.error('Expected ID')
+        elif self.check_string_not('='):
+            self.token.error('Expected =')
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'int':
+            print(tmp_tk.recognised_string)
+            self.token.next_token()
+            if self.check_string_not('('):
+                self.token.error('Expected (')
+            if self.check_string_not('input'):
+                self.token.error('Expected input')
+            if self.check_string_not('('):
+                self.token.error('Expected (')
+            if self.check_string_not(')'):
+                self.token.error('Expected )')
+            if self.check_string_not(')'):
+                self.token.error('Expected )')
+            if self.check_string_not(';'):
+                self.token.error('Expected ;')
+        else:
+            self.expression()
+            # check for ';'
+
+    def print_stat(self):
+        pass
+
+    def return_stat(self):
+        pass
+
+    def if_stat(self):
+        pass
+
+    def while_stat(self):
+        pass
+
+    def expression(self):
         pass
 
 
-    ##############################################################
+##############################################################
     #                                                            #
     #                     Program Starts Here                    #
     #                                                            #
     ##############################################################
 
-
 if __name__ == '__main__':
-    test = Syntax()
-    test.start_rule()
+    test = Lex('test.cpy')
+    b = Syntax()
+    #while test.file:
+    #    tk = test.next_token()
+    #    tk.__str__()
+    b.start_rule()
+
+    #while test.file:
+    #    a = test.next_token()
+    #    a.__str__()
