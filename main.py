@@ -383,6 +383,7 @@ class Syntax:
     def statements(self):
         self.statement()
 
+
     def statement(self):
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -390,6 +391,7 @@ class Syntax:
                 self.simple_statement()
             elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
                 self.structured_statement()
+                break
             else:
                 #self.token.error('Expected Statement')
                 break
@@ -436,9 +438,7 @@ class Syntax:
             if self.check_string_not(';'):
                 self.token.error('Expected ;')
         else:
-            print("Exp start")
             self.expression()
-            print("exp out")
             if self.check_string_not(';'):
                 self.token.error('expected ;')
 
@@ -458,10 +458,11 @@ class Syntax:
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.optional_sign()
+        self.term()
         tmp_tk = self.token.token_sneak_peak()
+        # mipws while edw? check diafaneies tous kanones
         if tmp_tk.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.token.next_token()
-            self.term()
 
     def term(self):
         self.factor()
@@ -473,6 +474,7 @@ class Syntax:
 
     def factor(self):
         tmp_token = self.token.next_token()
+        tmp_token.__str__()
         if not tmp_token.recognised_string.isdigit():
             self.token.error('INTEGER')
         tmp_token = self.token.token_sneak_peak()
