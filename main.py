@@ -36,12 +36,10 @@ class Lex:
     num_op = ['+', '-', '*', '//']
     relation_op = ['<', '>', '!=', '<=', '>=', '==']
     delimiter_op = [';', ',', ':', ';']
-    current_line = 1
-    file_name = ''
     recognised_string = ''
     family = ''
+    family = ''
     position = 0
-    file = ''
     char = ''
 
     def __init__(self, file_name):
@@ -289,7 +287,7 @@ class Syntax:
 
     def start_rule(self):
         self.def_main_part()
-        self.call_main_part()
+        #self.call_main_part()
 
     def def_main_part(self):
         self.def_main_function()
@@ -316,19 +314,50 @@ class Syntax:
                 break
         # prepei na kanei sneak peak ena token gia na dei an tha mpei stin function
         # diaforetika katanalwnei token xwris logo
-        # self.def_function()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'def':
+                self.def_function()
+            else:
+                break
         self.statements()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
     def def_function(self):
-        # if self.check_string_not('def'):
-        pass
+        if self.check_string_not('def'):
+            self.token.error('Expected function declarion with def')
+        if self.check_family_not('var'):
+            self.token.error('Expected a variable')
+        if self.check_string_not('('):
+            self.token.error('Expected ( ')
+        self.id_list()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+        if self.check_string_not('#{'):
+            self.token.error('Expected #{')
 
-    # self.token.error('Expected keyword \'def\'')
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#declare':
+                self.declarations()
+            else:
+                break
 
-    # if self.check_family_not('var'):
-    # self.token.error('var')
+        # i think some more thought required here
+        # in order to distinguish declarations from def_function
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#declare':
+                self.declarations()
+            else:
+                break
+        self.statements()
+
+        if self.check_string_not('#}'):
+            self.token.error('Expected #}')
 
     def declarations(self):
         tmp_tk = self.token.token_sneak_peak()
@@ -407,8 +436,11 @@ class Syntax:
             if self.check_string_not(';'):
                 self.token.error('Expected ;')
         else:
+            print("Exp start")
             self.expression()
-            # check for ';'
+            print("exp out")
+            if self.check_string_not(';'):
+                self.token.error('expected ;')
 
     def print_stat(self):
         pass
@@ -423,13 +455,96 @@ class Syntax:
         pass
 
     def expression(self):
-        #self.optional_sign ()
-        #self.term()
+        tmp_token = self.token.token_sneak_peak()
+        if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
+            self.optional_sign()
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '+' or tmp_token.recognised_string == '-':
+            self.token.next_token()
+            self.term()
 
+    def term(self):
+        self.factor()
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '*':
+            if self.check_string_not('*'):
+                self.token.error('*')
+            self.factor()
+
+    def factor(self):
+        tmp_token = self.token.next_token()
+        if not tmp_token.recognised_string.isdigit():
+            self.token.error('INTEGER')
+        tmp_token = self.token.token_sneak_peak()
+        if tmp_token.recognised_string == '(':
+            tmp_token = self.token.next_token()
+            self.expression()
+            if self.check_string_not(')'):
+                self.token.error(')')
+        elif tmp_token.family == 'var':
+            tmp_token = self.token.next_token()
+            self.idtail()
+
+    def idtail(self):
+        if self.check_string_not('('):
+            self.token.error('(')
+        self.actual_par_list()
+        if self.check_string_not(')'):
+            self.token.error(')')
+
+    def actual_par_list(self):
+        self.expression()
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == ',':
+            self.token.next_token()
+            self.expression()
+
+    def optional_sign(self):
+        tmp_tk = self.token.next_token()
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
+            self.token.error('Too many + or -')
+
+    def condition(self):
         pass
 
+    def bool_term(self):
+        pass
 
-##############################################################
+    def bool_factor(self):
+        pass
+
+    def call_main_part(self):
+        if self.check_string_not('if'):
+            self.token.error('Expected if')
+        if self.check_string_not('__name__'):
+            self.token.error('Expected __name__')
+        if self.check_string_not('=='):
+            self.token.error('Expected ==')
+        if self.check_string_not('__main__'):
+            self.token.error('Expected __main__')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+
+        self.main_function_call()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.family != 'var':
+                break
+            else:
+                self.main_function_call()
+
+    def main_function_call(self):
+        if self.check_family_not('var'):
+            self.token.error('Expected var')
+        elif self.check_string_not('('):
+            self.token.error('(')
+        elif self.check_string_not(')'):
+            self.token.error(')')
+        elif self.check_string_not(';'):
+            self.token.error(';')
+
+    ##############################################################
     #                                                            #
     #                     Program Starts Here                    #
     #                                                            #
