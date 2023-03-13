@@ -350,12 +350,12 @@ class Syntax:
         # in order to distinguish declarations from def_function
         while True:
             tmp_tk = self.token.token_sneak_peak()
-            if tmp_tk.recognised_string == '#declare':
-                self.declarations()
+            if tmp_tk.recognised_string == 'def':
+                self.def_function()
             else:
                 break
+        print("HI")
         self.statements()
-
         if self.check_string_not('#}'):
             self.token.error('Expected #}')
 
@@ -383,7 +383,6 @@ class Syntax:
     def statements(self):
         self.statement()
 
-
     def statement(self):
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -391,7 +390,6 @@ class Syntax:
                 self.simple_statement()
             elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
                 self.structured_statement()
-                break
             else:
                 #self.token.error('Expected Statement')
                 break
@@ -452,12 +450,26 @@ class Syntax:
         pass
 
     def while_stat(self):
-        pass
+        if self.check_string_not('while'):
+            self.token.error('Expected while')
+        if self.check_string_not('('):
+            self.token.error('Expected )')
+        self.condition()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '#{':
+            self.statements()
+        else:
+            self.statement()
 
     def expression(self):
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.optional_sign()
+
         self.term()
         tmp_tk = self.token.token_sneak_peak()
         # mipws while edw? check diafaneies tous kanones
@@ -474,9 +486,10 @@ class Syntax:
 
     def factor(self):
         tmp_token = self.token.next_token()
-        tmp_token.__str__()
-        if not tmp_token.recognised_string.isdigit():
-            self.token.error('INTEGER')
+        if  tmp_token.recognised_string.isdigit():
+            tmp_token.__str__()
+            #self.token.error('INTEGER')
+
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '(':
             tmp_token = self.token.next_token()
@@ -508,13 +521,45 @@ class Syntax:
             self.token.error('Too many + or -')
 
     def condition(self):
-        pass
+        self.bool_term()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'or':
+                self.bool_term()
+            else:
+                break
 
     def bool_term(self):
-        pass
+        self.bool_factor()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'and':
+                self.bool_factor()
+            else:
+                break
 
     def bool_factor(self):
-        pass
+        tmp_tk = self.token.token_sneak_peak()
+        #tmp_tk.__str__()
+        if tmp_tk.recognised_string == 'not':
+            self.token.next_token()
+            if self.check_string_not('['):
+                self.token.error('Expected [')
+            self.condition()
+            if self.check_string_not(']'):
+                self.token.error('Expected ]')
+        elif tmp_tk.recognised_string == '[':
+            self.token.next_token()
+            self.condition()
+            if self.check_string_not(']'):
+                self.token.error('Expected ]')
+        else:
+            self.expression()
+            #REL_OP
+            tmp_tk = self.token.token_sneak_peak()
+            if  tmp_tk.recognised_string not in self.token.relation_op:
+                self.token.error('Expected Rel OP')
+            self.expression()
 
     def call_main_part(self):
         if self.check_string_not('if'):
@@ -563,3 +608,5 @@ if __name__ == '__main__':
     #while test.file:
     #    a = test.next_token()
     #    a.__str__()
+
+    test.file.close()
