@@ -362,7 +362,7 @@ class Syntax:
             elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
                 self.structured_statement()
             else:
-                self.token.error('Expected Statement')
+                #self.token.error('Expected Statement')
                 break
 
     def simple_statement(self):
@@ -423,6 +423,9 @@ class Syntax:
         pass
 
     def expression(self):
+        #self.optional_sign ()
+        #self.term()
+
         pass
 
 
