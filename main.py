@@ -3,9 +3,6 @@ import string
 
 
 class Token:
-    recognised_string = ''
-    family = ''
-    line_number = 1
 
     def __init__(self, recognised_string, family, line_number):
         self.recognised_string = recognised_string
@@ -252,11 +249,10 @@ class Lex:
 
 
 class Syntax:
-    token = None
 
     def __init__(self):
         self.token = Lex('test.cpy')
-        self.tk = None
+
 
     ##############################################################
     #                                                            #
@@ -265,16 +261,16 @@ class Syntax:
     ##############################################################
 
     def check_string_not(self, expected_word):
-        self.tk = self.token.next_token()
-        self.tk.__str__()
-        if self.tk.recognised_string != expected_word:
+        tk = self.token.next_token()
+        #tk.__str__()
+        if tk.recognised_string != expected_word:
             return True
         return False
 
     def check_family_not(self, expected_word):
-        self.tk = self.token.next_token()
-        self.tk.__str__()
-        if self.tk.family != expected_word:
+        tk = self.token.next_token()
+        #tk.__str__()
+        if tk.family != expected_word:
             return True
         return False
 
@@ -419,7 +415,6 @@ class Syntax:
             self.token.error('Expected =')
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == 'int':
-            print(tmp_tk.recognised_string)
             self.token.next_token()
             if self.check_string_not('('):
                 self.token.error('Expected (')
@@ -485,7 +480,7 @@ class Syntax:
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == 'else':
             #consume
-            self.token.next_token().__str__()
+            self.token.next_token()
             if self.check_string_not(':'):
                 self.token.error('If expected :')
             tmp_tk = self.token.token_sneak_peak()
@@ -528,7 +523,6 @@ class Syntax:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
                 kati = self.token.next_token()
-                print(kati.recognised_string)
                 self.term()
             else:
                 break
@@ -538,18 +532,19 @@ class Syntax:
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == '*' or tmp_tk.recognised_string == '//':
-                if self.check_string_not('*'):
-                    self.token.error('*')
+                new_token = self.token.next_token()
+                if new_token.recognised_string != '*' and new_token.recognised_string != '//':
+                    self.token.error('* or //')
                 self.factor()
             else:
                 break
 
     def factor(self):
         tmp_token = self.token.next_token()
-        tmp_token.__str__()
         if tmp_token.recognised_string.isdigit():
-            tmp_token.__str__()
+            pass
             #self.token.error('INTEGER')
+
 
         if tmp_token.recognised_string == '(':
             self.expression()
@@ -604,7 +599,6 @@ class Syntax:
 
     def bool_factor(self):
         tmp_tk = self.token.token_sneak_peak()
-        #tmp_tk.__str__()
         if tmp_tk.recognised_string == 'not':
             self.token.next_token()
             if self.check_string_not('['):
@@ -620,7 +614,6 @@ class Syntax:
         else:
             self.expression()
             tmp_tk = self.token.next_token()
-            tmp_tk.__str__()
             if tmp_tk.recognised_string not in self.token.relation_op:
                 self.token.error('Expected Rel OP')
             self.expression()
