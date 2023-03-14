@@ -71,7 +71,7 @@ class Lex:
             self.position = self.file.tell()
             if self.char == '':
                 print("EOF")
-                return 'EOF'
+                exit()
             elif self.char == '\n':
                 self.current_line += 1
                 continue
@@ -280,7 +280,7 @@ class Syntax:
 
     def start_rule(self):
         self.def_main_part()
-        #self.call_main_part()
+        self.call_main_part()
 
     def def_main_part(self):
         self.def_main_function()
@@ -370,10 +370,13 @@ class Syntax:
     def id_list(self):
         if self.check_family_not('var'):
             self.token.error('var')
-        tmp_tk = self.token.token_sneak_peak()
-        if tmp_tk.recognised_string == ',':
-            self.token.next_token()
-            self.id_list()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == ',':
+                self.token.next_token()
+                self.id_list()
+            else:
+                break
 
     def statements(self):
         self.statement()
@@ -520,25 +523,26 @@ class Syntax:
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.optional_sign()
-
         self.term()
         while True:
             tmp_tk = self.token.token_sneak_peak()
-            if tmp_tk.recognised_string == '+' or tmp_token.recognised_string == '-':
+            if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
                 kati = self.token.next_token()
-                self.term()
                 print(kati.recognised_string)
+                self.term()
             else:
                 break
 
-
     def term(self):
         self.factor()
-        tmp_tk = self.token.token_sneak_peak()
-        if tmp_tk.recognised_string == '*':
-            if self.check_string_not('*'):
-                self.token.error('*')
-            self.factor()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '*' or tmp_tk.recognised_string == '//':
+                if self.check_string_not('*'):
+                    self.token.error('*')
+                self.factor()
+            else:
+                break
 
     def factor(self):
         tmp_token = self.token.next_token()
@@ -557,10 +561,12 @@ class Syntax:
     def idtail(self):
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '(':
+            self.token.next_token()
             self.actual_par_list()
-            tmp_token = self.token.token_sneak_peak()
-            if tmp_token.recognised_string != ')':
+            if self.check_string_not(')'):
                 self.token.error(')')
+        else:
+            return
 
     def actual_par_list(self):
         self.expression()
@@ -613,7 +619,6 @@ class Syntax:
                 self.token.error('Expected ]')
         else:
             self.expression()
-            print("RELL")
             tmp_tk = self.token.next_token()
             tmp_tk.__str__()
             if tmp_tk.recognised_string not in self.token.relation_op:
