@@ -1,3 +1,4 @@
+import argparse
 import os.path
 import string
 
@@ -26,18 +27,18 @@ class Token:
 
 class Lex:
     state = ''
+    recognised_string = ''
+    position = 0
+    char = ''
+
+    # This is the alphabet of allowed symbols and words
     digits = string.digits
-    keywords = ['if','else', 'while', 'def', 'return', 'int', 'print', '#declare']
+    keywords = ['if', 'else', 'while', 'def', 'return', 'int', 'print', '#declare']
     alphabet = string.ascii_letters + '_'
     grouping_symbols = ['(', ')', '{', '}', '#{', '#}', '[', ']']
     num_op = ['+', '-', '*', '//']
     relation_op = ['<', '>', '!=', '<=', '>=', '==']
     delimiter_op = [';', ',', ':', ';']
-    recognised_string = ''
-    family = ''
-    family = ''
-    position = 0
-    char = ''
 
     def __init__(self, file_name):
         self.current_line = 1
@@ -59,9 +60,7 @@ class Lex:
         if not os.path.isfile(self.file_name):
             print("Wrong file path")
             return
-
         self.state = 'start'
-
         while self.state == 'start':
             self.recognised_string = ''
             self.char = self.file.read(1)
@@ -93,15 +92,11 @@ class Lex:
 
     def __error(self):
         print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
+        exit()
 
     def error(self, output):
         print('Expected keyword \'' + output + '\'' + ' at ' + str(self.current_line))
-
-    def token_peak(self):
-        tmp_pos = self.file.tell()
-        tk = self.next_token()
-        self.file.seek(tmp_pos)
-        return tk
+        exit()
 
     def __len_test(self):
         if len(self.recognised_string) > 30:
@@ -203,7 +198,6 @@ class Lex:
             return self.keyword_token()
 
     def grouping_symbol_token(self):
-        # self.state = 'grouping_symbol'
         self.recognised_string += self.char
         return Token(self.recognised_string, "grouping_symbol", self.current_line)
 
@@ -213,7 +207,6 @@ class Lex:
             self.recognised_string += self.char
             self.char = self.file.read(1)
             self.position = self.file.tell()
-
             if (self.char not in self.alphabet and self.char not in self.digits) or self.char == '' or self.char == ' ':
                 self.state = 'terminal'
                 self.file.seek(self.position - 1)
@@ -253,7 +246,6 @@ class Syntax:
     def __init__(self):
         self.token = Lex('test.cpy')
 
-
     ##############################################################
     #                                                            #
     #                     Syntax Functions                       #
@@ -262,14 +254,14 @@ class Syntax:
 
     def check_string_not(self, expected_word):
         tk = self.token.next_token()
-        #tk.__str__()
+        # tk.__str__()
         if tk.recognised_string != expected_word:
             return True
         return False
 
     def check_family_not(self, expected_word):
         tk = self.token.next_token()
-        #tk.__str__()
+        # tk.__str__()
         if tk.family != expected_word:
             return True
         return False
@@ -385,7 +377,7 @@ class Syntax:
             elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
                 self.structured_statement()
             else:
-                #self.token.error('Expected Statement')
+                # self.token.error('Expected Statement')
                 break
 
     def simple_statement(self):
@@ -444,7 +436,6 @@ class Syntax:
         if self.check_string_not(';'):
             self.token.error('Expected ;')
 
-
     def return_stat(self):
         if self.check_string_not('return'):
             self.token.error('Expected print')
@@ -479,7 +470,7 @@ class Syntax:
 
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == 'else':
-            #consume
+            # consume
             self.token.next_token()
             if self.check_string_not(':'):
                 self.token.error('If expected :')
@@ -491,9 +482,6 @@ class Syntax:
                     self.token.error('If expected #}')
             else:
                 self.statement()
-
-
-
 
     def while_stat(self):
         if self.check_string_not('while'):
@@ -522,7 +510,7 @@ class Syntax:
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
-                kati = self.token.next_token()
+                self.token.next_token()
                 self.term()
             else:
                 break
@@ -543,8 +531,7 @@ class Syntax:
         tmp_token = self.token.next_token()
         if tmp_token.recognised_string.isdigit():
             pass
-            #self.token.error('INTEGER')
-
+            # self.token.error('INTEGER')
 
         if tmp_token.recognised_string == '(':
             self.expression()
@@ -574,7 +561,7 @@ class Syntax:
                 break
 
     def optional_sign(self):
-        tmp_tk = self.token.next_token()
+        self.token.next_token()
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
             self.token.error('Too many + or -')
@@ -654,15 +641,20 @@ class Syntax:
     #                                                            #
     ##############################################################
 
+
 if __name__ == '__main__':
-    test = Lex('test.cpy')
+    text = input("Provide file name or path \n")
+    #parser = argparse.ArgumentParser()
+    #args = parser.parse_args()
+    print(args)
+    test = Lex(text)
     b = Syntax()
-    #while test.file:
+    # while test.file:
     #    tk = test.next_token()
     #    tk.__str__()
     b.start_rule()
 
-    #while test.file:
+    # while test.file:
     #    a = test.next_token()
     #    a.__str__()
 
