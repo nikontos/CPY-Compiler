@@ -49,6 +49,7 @@ class Lex:
         return
 
     def token_sneak_peak(self):
+        """Return the next token without actually consuming it"""
         tmp_line = self.current_line
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
@@ -57,6 +58,7 @@ class Lex:
         return tmp_tk
 
     def next_token(self):
+        """Returns the next token in the file"""
         if not os.path.isfile(self.file_name):
             print("Wrong file path")
             return
@@ -99,6 +101,7 @@ class Lex:
         exit()
 
     def __len_test(self):
+        """Returns False if the string of the token is >30 chars"""
         if len(self.recognised_string) > 30:
             return 0
         return 1
@@ -172,6 +175,8 @@ class Lex:
         return Token(self.recognised_string, 'del', self.current_line)
 
     def rem(self):
+        """Handles the '#' character and returns the token it corresponds
+            Either a comment, a keyword or a grouping symbol"""
         self.recognised_string += self.char
         self.char = self.file.read(1)
 
@@ -192,6 +197,9 @@ class Lex:
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
                         return self.next_token()
+                    if self.char == '':
+                        print('Reached EOF without closing comments')
+                        exit()
         elif self.char in self.grouping_symbols:
             return self.grouping_symbol_token()
         elif self.char in self.alphabet:
@@ -253,6 +261,10 @@ class Syntax:
     ##############################################################
 
     def check_string_not(self, expected_word):
+        """
+        :param expected_word: The string we will check
+        :return: True if the next token is different from the param
+        """
         tk = self.token.next_token()
         # tk.__str__()
         if tk.recognised_string != expected_word:
@@ -643,10 +655,10 @@ class Syntax:
 
 
 if __name__ == '__main__':
-    text = input("Provide file name or path \n")
-    #parser = argparse.ArgumentParser()
-    #args = parser.parse_args()
-    print(args)
+    text = input("Provide the name or the path of .cpy programm\n")
+    # parser = argparse.ArgumentParser()
+    # args = parser.parse_args()
+    # print(args)
     test = Lex(text)
     b = Syntax()
     # while test.file:
