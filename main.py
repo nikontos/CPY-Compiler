@@ -53,8 +53,10 @@ class Lex:
         return
 
     def token_sneak_peak(self):
+        print("############# Before sneak peak" + str(self.position) + "#######################")
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
+        print("############# After sneak peak" + str(self.position) + "#######################")
         self.file.seek(tmp_pos)
         return tmp_tk
 
@@ -331,7 +333,9 @@ class Syntax:
     # self.token.error('var')
 
     def declarations(self):
+        pos = self.token.file.tell()
         tmp_tk = self.token.token_sneak_peak()
+        self.token.file.seek(pos)
         if tmp_tk.recognised_string == '#declare':
             self.declaration_line()
 
