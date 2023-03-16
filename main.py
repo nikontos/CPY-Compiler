@@ -1,11 +1,9 @@
+import argparse
 import os.path
 import string
 
 
 class Token:
-    recognised_string = ''
-    family = ''
-    line_number = 1
 
     def __init__(self, recognised_string, family, line_number):
         self.recognised_string = recognised_string
@@ -29,20 +27,18 @@ class Token:
 
 class Lex:
     state = ''
+    recognised_string = ''
+    position = 0
+    char = ''
+
+    # This is the alphabet of allowed symbols and words
     digits = string.digits
-    keywords = ['if', 'while', 'def', 'return', 'int', 'print']
+    keywords = ['if', 'else', 'while', 'def', 'return', 'int', 'print', '#declare']
     alphabet = string.ascii_letters + '_'
     grouping_symbols = ['(', ')', '{', '}', '#{', '#}', '[', ']']
     num_op = ['+', '-', '*', '//']
     relation_op = ['<', '>', '!=', '<=', '>=', '==']
     delimiter_op = [';', ',', ':', ';']
-    current_line = 1
-    file_name = ''
-    recognised_string = ''
-    family = ''
-    position = 0
-    file = ''
-    char = ''
 
     def __init__(self, file_name):
         self.current_line = 1
@@ -53,33 +49,28 @@ class Lex:
         return
 
     def token_sneak_peak(self):
-        print("############# Before sneak peak" + str(self.position) + "#######################")
+        """Return the next token without actually consuming it"""
+        tmp_line = self.current_line
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
         print("############# After sneak peak" + str(self.position) + "#######################")
         self.file.seek(tmp_pos)
+        self.current_line = tmp_line
         return tmp_tk
 
-    def char_sneak_peak(self):
-        tmp_pos = self.file.tell()
-        tmp_char = self.file.read(1)
-        self.file.seek(tmp_pos)
-        return tmp_char
-
     def next_token(self):
+        """Returns the next token in the file"""
         if not os.path.isfile(self.file_name):
             print("Wrong file path")
             return
-
         self.state = 'start'
-
         while self.state == 'start':
             self.recognised_string = ''
             self.char = self.file.read(1)
             self.position = self.file.tell()
             if self.char == '':
                 print("EOF")
-                return 'EOF'
+                exit()
             elif self.char == '\n':
                 self.current_line += 1
                 continue
@@ -104,17 +95,14 @@ class Lex:
 
     def __error(self):
         print("There was an error at " + self.file_name + " @Line : " + str(self.current_line))
+        exit()
 
     def error(self, output):
         print('Expected keyword \'' + output + '\'' + ' at ' + str(self.current_line))
-
-    def token_peak(self):
-        tmp_pos = self.file.tell()
-        tk = self.next_token()
-        self.file.seek(tmp_pos)
-        return tk
+        exit()
 
     def __len_test(self):
+        """Returns False if the string of the token is >30 chars"""
         if len(self.recognised_string) > 30:
             return 0
         return 1
@@ -152,7 +140,6 @@ class Lex:
 
     def relation_op_token(self):
         self.recognised_string += self.char
-        self.char = self.file.read(1)
         if self.char == '<':
             self.char = self.file.read(1)
             self.position = self.file.tell()
@@ -189,6 +176,8 @@ class Lex:
         return Token(self.recognised_string, 'del', self.current_line)
 
     def rem(self):
+        """Handles the '#' character and returns the token it corresponds
+            Either a comment, a keyword or a grouping symbol"""
         self.recognised_string += self.char
         self.char = self.file.read(1)
 
@@ -198,40 +187,35 @@ class Lex:
             while self.state == 'comment':
                 self.recognised_string += self.char
                 self.char = self.file.read(1)
-                print("Eimai stin "+str(self.current_line)+" Kai eida "+self.recognised_string)
                 if self.char == '\n':
                     self.current_line += 1
                 if self.char == '#':
-                    print("Eida #")
                     self.recognised_string += self.char
                     self.char = self.file.read(1)
                     if self.char == '\n':
-                        print("Eida new line")
                         self.current_line += 1
                     if self.char == '$':
-                        print("Comment telos")
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
-                        print("************"+str(self.current_line)+"***************")
                         return self.next_token()
+                    if self.char == '':
+                        print('Reached EOF without closing comments')
+                        exit()
         elif self.char in self.grouping_symbols:
             return self.grouping_symbol_token()
         elif self.char in self.alphabet:
             return self.keyword_token()
 
     def grouping_symbol_token(self):
-        # self.state = 'grouping_symbol'
         self.recognised_string += self.char
         return Token(self.recognised_string, "grouping_symbol", self.current_line)
 
     def keyword_token(self):
-        print("Mpika Key kai eimai "+str(self.current_line))
         self.state = 'keyword'
         while self.state == 'keyword':
             self.recognised_string += self.char
             self.char = self.file.read(1)
             self.position = self.file.tell()
-
             if (self.char not in self.alphabet and self.char not in self.digits) or self.char == '' or self.char == ' ':
                 self.state = 'terminal'
                 self.file.seek(self.position - 1)
@@ -267,12 +251,9 @@ class Lex:
 
 
 class Syntax:
-    token = None
 
     def __init__(self):
         self.token = Lex('test.cpy')
-        self.tk = None
-
 
     ##############################################################
     #                                                            #
@@ -281,15 +262,20 @@ class Syntax:
     ##############################################################
 
     def check_string_not(self, expected_word):
-        self.tk = self.token.next_token()
-        self.tk.__str__()
-        if self.tk.recognised_string != expected_word:
+        """
+        :param expected_word: The string we will check
+        :return: True if the next token is different from the param
+        """
+        tk = self.token.next_token()
+        # tk.__str__()
+        if tk.recognised_string != expected_word:
             return True
         return False
 
     def check_family_not(self, expected_word):
-        self.tk = self.token.next_token()
-        if self.tk.family != expected_word:
+        tk = self.token.next_token()
+        # tk.__str__()
+        if tk.family != expected_word:
             return True
         return False
 
@@ -299,6 +285,12 @@ class Syntax:
 
     def def_main_part(self):
         self.def_main_function()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'def':
+                self.def_main_function()
+            else:
+                break
 
     def def_main_function(self):
         if self.check_string_not('def'):
@@ -314,23 +306,57 @@ class Syntax:
         if self.check_string_not('#{'):
             self.token.error('Expected keyword \'#{\'')
 
-        
-        self.declarations()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#declare':
+                self.declarations()
+            else:
+                break
         # prepei na kanei sneak peak ena token gia na dei an tha mpei stin function
         # diaforetika katanalwnei token xwris logo
-        # self.def_function()
-        # self.statements()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'def':
+                self.def_function()
+            else:
+                break
+        self.statements()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
     def def_function(self):
-        # if self.check_string_not('def'):
-        pass
+        if self.check_string_not('def'):
+            self.token.error('Expected function declarion with def')
+        if self.check_family_not('var'):
+            self.token.error('Expected a variable')
+        if self.check_string_not('('):
+            self.token.error('Expected ( ')
+        self.id_list()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+        if self.check_string_not('#{'):
+            self.token.error('Expected #{')
 
-    # self.token.error('Expected keyword \'def\'')
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#declare':
+                self.declarations()
+            else:
+                break
 
-    # if self.check_family_not('var'):
-    # self.token.error('var')
+        # i think some more thought required here
+        # in order to distinguish declarations from def_function
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'def':
+                self.def_function()
+            else:
+                break
+        self.statements()
+        if self.check_string_not('#}'):
+            self.token.error('Expected #}')
 
     def declarations(self):
         pos = self.token.file.tell()
@@ -347,18 +373,282 @@ class Syntax:
     def id_list(self):
         if self.check_family_not('var'):
             self.token.error('var')
-        tmp_tk = self.token.token_sneak_peak()
-        if tmp_tk.recognised_string == ',':
-            self.token.next_token()
-            self.id_list()
-
-
-    def call_main_part(self):
-        pass
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == ',':
+                self.token.next_token()
+                self.id_list()
+            else:
+                break
 
     def statements(self):
-        pass
+        self.statement()
 
+    def statement(self):
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.family == 'var' or tmp_tk.recognised_string == 'print' or tmp_tk.recognised_string == 'return':
+                self.simple_statement()
+            elif tmp_tk.recognised_string == 'if' or tmp_tk.recognised_string == 'while':
+                self.structured_statement()
+            else:
+                # self.token.error('Expected Statement')
+                break
+
+    def simple_statement(self):
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.family == 'var':
+            self.assignment_stat()
+        elif tmp_tk.recognised_string == 'print':
+            self.print_stat()
+        elif tmp_tk.recognised_string == 'return':
+            self.return_stat()
+        else:
+            self.token.error("Error in simple statement")
+
+    def structured_statement(self):
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'if':
+            self.if_stat()
+        elif tmp_tk.recognised_string == 'while':
+            self.while_stat()
+        else:
+            self.token.error('Expected if or while')
+
+    def assignment_stat(self):
+        if self.check_family_not('var'):
+            self.token.error('Expected ID')
+        elif self.check_string_not('='):
+            self.token.error('Expected =')
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'int':
+            self.token.next_token()
+            if self.check_string_not('('):
+                self.token.error('Expected (')
+            if self.check_string_not('input'):
+                self.token.error('Expected input')
+            if self.check_string_not('('):
+                self.token.error('Expected (')
+            if self.check_string_not(')'):
+                self.token.error('Expected )')
+            if self.check_string_not(')'):
+                self.token.error('Expected )')
+            if self.check_string_not(';'):
+                self.token.error('Expected ;')
+        else:
+            self.expression()
+            if self.check_string_not(';'):
+                self.token.error('expected ;')
+
+    def print_stat(self):
+        if self.check_string_not('print'):
+            self.token.error('Expected print')
+        if self.check_string_not('('):
+            self.token.error('Expected (')
+        self.expression()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(';'):
+            self.token.error('Expected ;')
+
+    def return_stat(self):
+        if self.check_string_not('return'):
+            self.token.error('Expected print')
+        if self.check_string_not('('):
+            self.token.error('Expected (')
+        self.expression()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(';'):
+            self.token.error('Expected ;')
+
+    def if_stat(self):
+        if self.check_string_not('if'):
+            self.token.error('Expected if')
+        if self.check_string_not('('):
+            self.token.error('Expected (')
+
+        self.condition()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '#{':
+            self.token.next_token()
+            self.statements()
+            if self.check_string_not('#}'):
+                self.token.error('If wanted #}')
+        else:
+            self.statement()
+
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'else':
+            # consume
+            self.token.next_token()
+            if self.check_string_not(':'):
+                self.token.error('If expected :')
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '#{':
+                self.token.next_token()
+                self.statements()
+                if self.check_string_not('#}'):
+                    self.token.error('If expected #}')
+            else:
+                self.statement()
+
+    def while_stat(self):
+        if self.check_string_not('while'):
+            self.token.error('Expected while')
+        if self.check_string_not('('):
+            self.token.error('Expected )')
+        self.condition()
+        if self.check_string_not(')'):
+            self.token.error('Expected )')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '#{':
+            self.token.next_token()
+            self.statements()
+            if self.check_string_not('#}'):
+                self.token.error('While wanted #}')
+        else:
+            self.statement()
+
+    def expression(self):
+        tmp_token = self.token.token_sneak_peak()
+        if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
+            self.optional_sign()
+        self.term()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
+                self.token.next_token()
+                self.term()
+            else:
+                break
+
+    def term(self):
+        self.factor()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == '*' or tmp_tk.recognised_string == '//':
+                new_token = self.token.next_token()
+                if new_token.recognised_string != '*' and new_token.recognised_string != '//':
+                    self.token.error('* or //')
+                self.factor()
+            else:
+                break
+
+    def factor(self):
+        tmp_token = self.token.next_token()
+        if tmp_token.recognised_string.isdigit():
+            pass
+            # self.token.error('INTEGER')
+
+        if tmp_token.recognised_string == '(':
+            self.expression()
+            if self.check_string_not(')'):
+                self.token.error(')')
+        elif tmp_token.family == 'var':
+            self.idtail()
+
+    def idtail(self):
+        tmp_token = self.token.token_sneak_peak()
+        if tmp_token.recognised_string == '(':
+            self.token.next_token()
+            self.actual_par_list()
+            if self.check_string_not(')'):
+                self.token.error(')')
+        else:
+            return
+
+    def actual_par_list(self):
+        self.expression()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == ',':
+                self.token.next_token()
+                self.expression()
+            else:
+                break
+
+    def optional_sign(self):
+        self.token.next_token()
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
+            self.token.error('Too many + or -')
+
+    def condition(self):
+        self.bool_term()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'or':
+                self.bool_term()
+            else:
+                break
+
+    def bool_term(self):
+        self.bool_factor()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.recognised_string == 'and':
+                self.bool_factor()
+            else:
+                break
+
+    def bool_factor(self):
+        tmp_tk = self.token.token_sneak_peak()
+        if tmp_tk.recognised_string == 'not':
+            self.token.next_token()
+            if self.check_string_not('['):
+                self.token.error('Expected [')
+            self.condition()
+            if self.check_string_not(']'):
+                self.token.error('Expected ]')
+        elif tmp_tk.recognised_string == '[':
+            self.token.next_token()
+            self.condition()
+            if self.check_string_not(']'):
+                self.token.error('Expected ]')
+        else:
+            self.expression()
+            tmp_tk = self.token.next_token()
+            if tmp_tk.recognised_string not in self.token.relation_op:
+                self.token.error('Expected Rel OP')
+            self.expression()
+
+    def call_main_part(self):
+        if self.check_string_not('if'):
+            self.token.error('Expected if')
+        if self.check_string_not('__name__'):
+            self.token.error('Expected __name__')
+        if self.check_string_not('=='):
+            self.token.error('Expected ==')
+        if self.check_string_not('__main__'):
+            self.token.error('Expected __main__')
+        if self.check_string_not(':'):
+            self.token.error('Expected :')
+
+        self.main_function_call()
+        while True:
+            tmp_tk = self.token.token_sneak_peak()
+            if tmp_tk.family != 'var':
+                break
+            else:
+                self.main_function_call()
+
+    def main_function_call(self):
+        if self.check_family_not('var'):
+            self.token.error('Expected var')
+        elif self.check_string_not('('):
+            self.token.error('(')
+        elif self.check_string_not(')'):
+            self.token.error(')')
+        elif self.check_string_not(';'):
+            self.token.error(';')
 
     ##############################################################
     #                                                            #
@@ -368,5 +658,19 @@ class Syntax:
 
 
 if __name__ == '__main__':
-    test = Syntax()
-    test.start_rule()
+    text = input("Provide the name or the path of .cpy programm\n")
+    # parser = argparse.ArgumentParser()
+    # args = parser.parse_args()
+    # print(args)
+    test = Lex(text)
+    b = Syntax()
+    # while test.file:
+    #    tk = test.next_token()
+    #    tk.__str__()
+    b.start_rule()
+
+    # while test.file:
+    #    a = test.next_token()
+    #    a.__str__()
+
+    test.file.close()
