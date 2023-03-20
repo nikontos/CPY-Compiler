@@ -1,6 +1,21 @@
 import argparse
 import os.path
 import string
+import colorsys
+import colored
+import cprint
+
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 class Token:
@@ -45,11 +60,12 @@ class Lex:
         self.file_name = file_name
         self.file = open(self.file_name, 'r')
 
+
     def __del__(self):
         return
 
     def token_sneak_peak(self):
-        """Return the next token without actually consuming it"""
+        """@return: A token type object, the next token without actually consuming it"""
         tmp_line = self.current_line
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
@@ -98,11 +114,12 @@ class Lex:
         exit()
 
     def error(self, output):
-        print('Expected keyword \'' + output + '\'' + ' at ' + str(self.current_line))
+        print(bcolors.WARNING + '[ERROR]' + bcolors.ENDC + bcolors.OKGREEN + ' Expected ' + bcolors.BOLD + output + bcolors.FAIL + ' at Line: ' + str(self.current_line))
         exit()
 
     def __len_test(self):
         """Returns False if the string of the token is >30 chars"""
+
         if len(self.recognised_string) > 30:
             return 0
         return 1
@@ -176,10 +193,13 @@ class Lex:
         return Token(self.recognised_string, 'del', self.current_line)
 
     def rem(self):
-        """Handles the '#' character and returns the token it corresponds
-            Either a comment, a keyword or a grouping symbol"""
+        """
+        Handles the '#' character and returns the token it corresponds
+        Either a comment, a keyword or a grouping symbol
+        """
         self.recognised_string += self.char
         self.char = self.file.read(1)
+        comment_line = self.current_line
 
         # comments state
         if self.char == '$':
@@ -187,6 +207,9 @@ class Lex:
             while self.state == 'comment':
                 self.recognised_string += self.char
                 self.char = self.file.read(1)
+                if self.char == '':
+                    print('Reached EOF without closing comments, comments started @Line: ' + str(comment_line))
+                    exit()
                 if self.char == '\n':
                     self.current_line += 1
                 if self.char == '#':
@@ -198,9 +221,7 @@ class Lex:
                         self.recognised_string = ''
                         # this return statement is used to ignore the comments
                         return self.next_token()
-                    if self.char == '':
-                        print('Reached EOF without closing comments')
-                        exit()
+
         elif self.char in self.grouping_symbols:
             return self.grouping_symbol_token()
         elif self.char in self.alphabet:
@@ -263,8 +284,8 @@ class Syntax:
 
     def check_string_not(self, expected_word):
         """
-        :param expected_word: The string we will check
-        :return: True if the next token is different from the param
+        @param expected_word: String: The string we will check
+        @return: BOOL: True if the next token is different from the param
         """
         tk = self.token.next_token()
         # tk.__str__()
@@ -298,13 +319,13 @@ class Syntax:
         if self.check_family_not('var'):
             self.token.error('var')
         if self.check_string_not('('):
-            self.token.error('Expected keyword \'(\'')
+            self.token.error(' \'(\'')
         if self.check_string_not(')'):
-            self.token.error('Expected keyword \')\'')
+            self.token.error(' \')\'')
         if self.check_string_not(':'):
             self.token.error('Expected keyword \'(:')
         if self.check_string_not('#{'):
-            self.token.error('Expected keyword \'#{\'')
+            self.token.error(' \'#{\'')
 
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -330,14 +351,14 @@ class Syntax:
         if self.check_family_not('var'):
             self.token.error('Expected a variable')
         if self.check_string_not('('):
-            self.token.error('Expected ( ')
+            self.token.error('( ')
         self.id_list()
         if self.check_string_not(')'):
-            self.token.error('Expected )')
+            self.token.error(')')
         if self.check_string_not(':'):
-            self.token.error('Expected :')
+            self.token.error(':')
         if self.check_string_not('#{'):
-            self.token.error('Expected #{')
+            self.token.error('#{')
 
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -356,7 +377,7 @@ class Syntax:
                 break
         self.statements()
         if self.check_string_not('#}'):
-            self.token.error('Expected #}')
+            self.token.error('#}')
 
     def declarations(self):
         pos = self.token.file.tell()
@@ -404,7 +425,7 @@ class Syntax:
         elif tmp_tk.recognised_string == 'return':
             self.return_stat()
         else:
-            self.token.error("Error in simple statement")
+            self.token.error("simple statement")
 
     def structured_statement(self):
         tmp_tk = self.token.token_sneak_peak()
@@ -413,73 +434,73 @@ class Syntax:
         elif tmp_tk.recognised_string == 'while':
             self.while_stat()
         else:
-            self.token.error('Expected if or while')
+            self.token.error('if or while')
 
     def assignment_stat(self):
         if self.check_family_not('var'):
-            self.token.error('Expected ID')
+            self.token.error('ID')
         elif self.check_string_not('='):
-            self.token.error('Expected =')
+            self.token.error('=')
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == 'int':
             self.token.next_token()
             if self.check_string_not('('):
-                self.token.error('Expected (')
+                self.token.error('(')
             if self.check_string_not('input'):
-                self.token.error('Expected input')
+                self.token.error('input')
             if self.check_string_not('('):
-                self.token.error('Expected (')
+                self.token.error('(')
             if self.check_string_not(')'):
-                self.token.error('Expected )')
+                self.token.error(')')
             if self.check_string_not(')'):
-                self.token.error('Expected )')
+                self.token.error(')')
             if self.check_string_not(';'):
-                self.token.error('Expected ;')
+                self.token.error(';')
         else:
             self.expression()
             if self.check_string_not(';'):
-                self.token.error('expected ;')
+                self.token.error(';')
 
     def print_stat(self):
         if self.check_string_not('print'):
-            self.token.error('Expected print')
+            self.token.error('print')
         if self.check_string_not('('):
-            self.token.error('Expected (')
+            self.token.error('(')
         self.expression()
         if self.check_string_not(')'):
-            self.token.error('Expected )')
+            self.token.error(')')
         if self.check_string_not(';'):
-            self.token.error('Expected ;')
+            self.token.error(';')
 
     def return_stat(self):
         if self.check_string_not('return'):
-            self.token.error('Expected print')
+            self.token.error('print')
         if self.check_string_not('('):
-            self.token.error('Expected (')
+            self.token.error('(')
         self.expression()
         if self.check_string_not(')'):
-            self.token.error('Expected )')
+            self.token.error(')')
         if self.check_string_not(';'):
-            self.token.error('Expected ;')
+            self.token.error(';')
 
     def if_stat(self):
         if self.check_string_not('if'):
-            self.token.error('Expected if')
+            self.token.error('if')
         if self.check_string_not('('):
-            self.token.error('Expected (')
+            self.token.error('(')
 
         self.condition()
         if self.check_string_not(')'):
-            self.token.error('Expected )')
+            self.token.error(')')
         if self.check_string_not(':'):
-            self.token.error('Expected :')
+            self.token.error(':')
 
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == '#{':
             self.token.next_token()
             self.statements()
             if self.check_string_not('#}'):
-                self.token.error('If wanted #}')
+                self.token.error('#} @IF statement')
         else:
             self.statement()
 
@@ -488,32 +509,32 @@ class Syntax:
             # consume
             self.token.next_token()
             if self.check_string_not(':'):
-                self.token.error('If expected :')
+                self.token.error(':')
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == '#{':
                 self.token.next_token()
                 self.statements()
                 if self.check_string_not('#}'):
-                    self.token.error('If expected #}')
+                    self.token.error('#} @IF Statement')
             else:
                 self.statement()
 
     def while_stat(self):
         if self.check_string_not('while'):
-            self.token.error('Expected while')
+            self.token.error('while')
         if self.check_string_not('('):
-            self.token.error('Expected )')
+            self.token.error(')')
         self.condition()
         if self.check_string_not(')'):
-            self.token.error('Expected )')
+            self.token.error(')')
         if self.check_string_not(':'):
-            self.token.error('Expected :')
+            self.token.error(':')
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == '#{':
             self.token.next_token()
             self.statements()
             if self.check_string_not('#}'):
-                self.token.error('While wanted #}')
+                self.token.error('#} @WHILE Statement')
         else:
             self.statement()
 
@@ -579,7 +600,7 @@ class Syntax:
         self.token.next_token()
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
-            self.token.error('Too many + or -')
+            self.token.error('Less + or - operations')
 
     def condition(self):
         self.bool_term()
@@ -604,33 +625,33 @@ class Syntax:
         if tmp_tk.recognised_string == 'not':
             self.token.next_token()
             if self.check_string_not('['):
-                self.token.error('Expected [')
+                self.token.error('[')
             self.condition()
             if self.check_string_not(']'):
-                self.token.error('Expected ]')
+                self.token.error(']')
         elif tmp_tk.recognised_string == '[':
             self.token.next_token()
             self.condition()
             if self.check_string_not(']'):
-                self.token.error('Expected ]')
+                self.token.error(']')
         else:
             self.expression()
             tmp_tk = self.token.next_token()
             if tmp_tk.recognised_string not in self.token.relation_op:
-                self.token.error('Expected Rel OP')
+                self.token.error('Rel OP')
             self.expression()
 
     def call_main_part(self):
         if self.check_string_not('if'):
-            self.token.error('Expected if')
+            self.token.error('if')
         if self.check_string_not('__name__'):
-            self.token.error('Expected __name__')
+            self.token.error('__name__')
         if self.check_string_not('=='):
-            self.token.error('Expected ==')
+            self.token.error('==')
         if self.check_string_not('__main__'):
-            self.token.error('Expected __main__')
+            self.token.error('__main__')
         if self.check_string_not(':'):
-            self.token.error('Expected :')
+            self.token.error(':')
 
         self.main_function_call()
         while True:
@@ -642,7 +663,7 @@ class Syntax:
 
     def main_function_call(self):
         if self.check_family_not('var'):
-            self.token.error('Expected var')
+            self.token.error('var')
         elif self.check_string_not('('):
             self.token.error('(')
         elif self.check_string_not(')'):

@@ -1,9 +1,10 @@
 def main_factorial():
 #{
 #$ declarations #$
-#$ 123123    #$
-#$ ssssaaa #$
+#$ declarations #$
+#$ declarations #$
 #declare x
+#declare a
 #declare i,fact
 #$ body of main_factorial #$
 x = int(input());
@@ -66,18 +67,19 @@ i = i + 1;
 return (1);
 #}
 
-#$ body of main_primes #$
-i = 2;
+#$body of main_primes#$
+i=2;
 while (i<=30):
+#{
 if (isPrime(i)==1):
 print(i);
 i = i + 1;
 #}
+#}
 
-if __main__ == "__main__":
+if __name__ == "__main__":
 #$ call of main functions #$
 main_factorial();
 main_fibonacci();
 main_countdigits();
 main_primes();
-
