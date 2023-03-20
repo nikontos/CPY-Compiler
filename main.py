@@ -1,9 +1,7 @@
 import argparse
 import os.path
 import string
-import colorsys
-import colored
-import cprint
+
 
 
 class bcolors:
