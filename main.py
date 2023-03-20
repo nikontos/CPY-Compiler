@@ -113,7 +113,7 @@ class Lex:
         exit()
 
     def error(self, output):
-        print(bcolors.WARNING + '[ERROR]' + bcolors.ENDC + bcolors.OKGREEN + ' Expected ' + bcolors.BOLD + output + bcolors.FAIL + ' at Line: ' + str(self.current_line))
+        print(bcolors.YELLOW + '[ERROR]' + bcolors.ENDC + bcolors.OKGREEN + ' Expected ' + bcolors.BOLD + output + bcolors.RED + ' at Line: ' + str(self.current_line))
         exit()
 
     def __len_test(self):
