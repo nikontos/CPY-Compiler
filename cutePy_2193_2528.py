@@ -1,7 +1,9 @@
-import argparse
+#       Nikolaos - Marios Kontos 2193
+#       Alexandros Pournaras 2528
+
 import os.path
 import string
-
+import sys
 
 
 class bcolors:
@@ -67,7 +69,6 @@ class Lex:
         tmp_line = self.current_line
         tmp_pos = self.file.tell()
         tmp_tk = self.next_token()
-        print("############# After sneak peak" + str(self.position) + "#######################")
         self.file.seek(tmp_pos)
         self.current_line = tmp_line
         return tmp_tk
@@ -271,8 +272,8 @@ class Lex:
 
 class Syntax:
 
-    def __init__(self):
-        self.token = Lex('test.cpy')
+    def __init__(self,path):
+        self.token = Lex(path)
 
     ##############################################################
     #                                                            #
@@ -378,9 +379,7 @@ class Syntax:
             self.token.error('#}')
 
     def declarations(self):
-        pos = self.token.file.tell()
         tmp_tk = self.token.token_sneak_peak()
-        self.token.file.seek(pos)
         if tmp_tk.recognised_string == '#declare':
             self.declaration_line()
 
@@ -677,19 +676,9 @@ class Syntax:
 
 
 if __name__ == '__main__':
-    text = input("Provide the name or the path of .cpy programm\n")
-    # parser = argparse.ArgumentParser()
-    # args = parser.parse_args()
-    # print(args)
-    test = Lex(text)
-    b = Syntax()
-    # while test.file:
-    #    tk = test.next_token()
-    #    tk.__str__()
+    if len(sys.argv) != 2:
+        print("Need only 1 argument")
+        sys.exit()
+    b = Syntax(sys.argv[1])
+
     b.start_rule()
-
-    # while test.file:
-    #    a = test.next_token()
-    #    a.__str__()
-
-    test.file.close()
