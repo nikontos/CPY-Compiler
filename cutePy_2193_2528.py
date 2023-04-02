@@ -6,6 +6,39 @@ import string
 import sys
 
 
+
+    ##############################################################
+    #                                                            #
+    #                            Quad                            #
+    #                                                            #
+    ##############################################################
+
+class Quad:
+
+    def __init__(self,):
+
+        self.temp_counter = 0
+        self.label = 0
+        # TODO 
+        pass
+
+
+
+    def new_temp(self,):
+        temp_name_to_return ="T$"
+        temp_name_toreturn += self.temp_counter
+        self.__advance_counter()
+        return temp_name_to_return
+
+    def __advance_counter(self,):
+        self.temp_counter += 1
+        return
+    
+    def __advance_label(self,):
+        self.label += 1
+
+
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
