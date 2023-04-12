@@ -5,41 +5,71 @@ import os.path
 import string
 import sys
 
-
-
-    ##############################################################
-    #                                                            #
-    #                            Quad                            #
-    #                                                            #
-    ##############################################################
-
 class Quad:
 
-    def __init__(self,):
-
-        self.temp_counter = 0
+    """
+    Creates a new quad and initialises some values
+    """
+    def __init__(self):
         self.label = 0
-        # TODO 
-        pass
+        self.temp_label = 0
+        self.operator, self.source1, self.source2, self.target = None
 
-
-
-    def new_temp(self,):
-        temp_name_to_return ="T$"
-        temp_name_toreturn += self.temp_counter
-        self.__advance_counter()
-        return temp_name_to_return
-
-    def __advance_counter(self,):
-        self.temp_counter += 1
-        return
-    
-    def __advance_label(self,):
+    def advance_label(self):
         self.label += 1
 
+    def advance_temp_label(self):
+        self.temp_label += 1
 
+    '''
+    Modifies the quad object we created based on the parameters
+    '''
+    def gen_quad(self,operator,source1,source2,target ):
+        self.next_quad()
+        self.operator = operator
+        self.source1 = source1
+        self.source2 = source2
+        self.target = target
+
+    """
+    Advances the label of the quad and returns its value
+    """
+    def next_quad(self):
+        self.advance_label()
+        return print('Next quad is : ' + self.label)
+
+    def new_temp(self):
+        self.advance_temp_label()
+        print('Next temp variable is : ' + '@T' + self.temp_label)
+
+    """
+    Creates and returns an empty list that will be used to store Quad labels
+    """
+    @staticmethod
+    def empty_list():
+        quad_list = []
+        return quad_list
+
+    """
+    Create and return a new list that has as a UNIQUE element the label of the Quad
+    """
+    @staticmethod
+    def make_list(label):
+        label_list = [label]
+        return label_list
+
+    @staticmethod
+    def merge_list(list1, list2):
+        merged_list = []
+        for i in list1:
+            merged_list.append(i)
+        for i in list2:
+            merged_list.append(i)
+
+        return merged_list
 
 class bcolors:
+
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
