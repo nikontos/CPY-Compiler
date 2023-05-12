@@ -5,15 +5,16 @@ import os.path
 import string
 import sys
 
-class Quad:
 
+class Quad:
     """
     Creates a new quad and initialises some values
     """
+
     def __init__(self):
         self.label = 0
         self.temp_label = 0
-        self.operator, self.source1, self.source2, self.target = None
+        self.operator, self.source1, self.source2, self.target = None, None, None, None
 
     def advance_label(self):
         self.label += 1
@@ -21,11 +22,18 @@ class Quad:
     def advance_temp_label(self):
         self.temp_label += 1
 
+    def to_string(self):
+        print("Quad Label : " + self.label)
+
+    def print_quad(self, quad):
+        print(str(quad.label) + ': ' + quad.operator + ' ' + quad.source1 + ' ' + quad.source2 + ' ' + quad.target)
+
     '''
     Modifies the quad object we created based on the parameters
     '''
-    def gen_quad(self,operator,source1,source2,target ):
-        self.next_quad()
+
+    def gen_quad(self, operator, source1, source2, target):
+        self.advance_label()
         self.operator = operator
         self.source1 = source1
         self.source2 = source2
@@ -34,17 +42,18 @@ class Quad:
     """
     Advances the label of the quad and returns its value
     """
+
     def next_quad(self):
-        self.advance_label()
-        return print('Next quad is : ' + self.label)
+        return self.label + 1
 
     def new_temp(self):
         self.advance_temp_label()
-        print('Next temp variable is : ' + '@T' + self.temp_label)
-
+        return_string = '@T'+str(self.temp_label)
+        return return_string
     """
     Creates and returns an empty list that will be used to store Quad labels
     """
+
     @staticmethod
     def empty_list():
         quad_list = []
@@ -53,8 +62,8 @@ class Quad:
     """
     Create and return a new list that has as a UNIQUE element the label of the Quad
     """
-    @staticmethod
-    def make_list(label):
+
+    def make_list(self,label):
         label_list = [label]
         return label_list
 
@@ -68,8 +77,96 @@ class Quad:
 
         return merged_list
 
-class bcolors:
 
+
+
+
+class Scope():
+    nested_lvl = 0
+
+    def __init__(self, level, enclsoed_scope=None):
+        self.entities = list()
+        self.level = level
+        self.nested_lvl += 1
+        self.enclosed_scope = enclsoed_scope
+        self.offset = 12
+
+    def add_entity(self, entity):
+        self.entities.append(entity)
+
+    def get_offset(self):
+        tmp_offset = self.offset
+        self.offset = self.offset + 4
+        return tmp_offset
+
+    def print_entities(self):
+        for i in self.entities:
+            print(i.name + ' Nested LvL: ' + str(self.level))
+
+class Entity:
+
+    def __init__(self, name, etype):
+        self.name = name
+        self.etype = etype
+
+
+class Constant(Entity):
+
+    def __init__(self, name, value):
+        super.__init__(name, "CONSTANT")
+        self.value = value
+
+
+class Variable(Entity):
+
+    def __init__(self, name, offset):
+        super().__init__(name, 'VARIABLE')
+        self.name = name
+        self.offset = offset
+
+
+class FormalParameter(Entity):
+    '''
+    mode = Anafora OR timi OR return value
+    '''
+
+    def __init__(self, name, mode):
+        super.__init__(name, 'FORMAL_PAREMETER')
+        self.mode = mode
+
+
+class Procedure(Entity):
+
+    def __init__(self, name, starting_quad, frame_length=12):
+        super.__init__(name, 'PROCEDURE')
+        self.starting_quad = starting_quad
+        self.frame_length = frame_length
+
+
+class TemporaryVariable(Entity):
+
+    def __init__(self, name, offset=-1):
+        super().__init__(name, "TMPVAR")
+        self.offset = offset
+
+
+class Parameter(Entity):
+
+    def __init__(self, name, mode, offset=-1):
+        super().__init__(name, "PARAMETER")
+        self.mode = mode
+        self.offset = mode
+        self.offset = offset
+
+
+class Function(Entity):
+
+    def __init__(self, name, starting_quad, frame_length=12):
+        super().__init__(name, 'FUNCTION')
+        self.starting_quad, self.frame_length = starting_quad, frame_length
+
+
+class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -123,7 +220,6 @@ class Lex:
         self.file_name = file_name
         self.file = open(self.file_name, 'r')
 
-
     def __del__(self):
         return
 
@@ -176,7 +272,9 @@ class Lex:
         exit()
 
     def error(self, output):
-        print(bcolors.YELLOW + '[ERROR]' + bcolors.ENDC + bcolors.OKGREEN + ' Expected ' + bcolors.BOLD + output + bcolors.RED + ' at Line: ' + str(self.current_line))
+        print(
+            bcolors.YELLOW + '[ERROR]' + bcolors.ENDC + bcolors.OKGREEN + ' Expected ' + bcolors.BOLD + output + bcolors.RED + ' at Line: ' + str(
+                self.current_line))
         exit()
 
     def __len_test(self):
@@ -317,8 +415,11 @@ class Lex:
                 self.state = 'terminal'
                 # the -1 on position is very important to not consume the next char
                 self.file.seek(self.position - 1)
+                return Token(self.recognised_string, "dig", self.current_line)
+
                 if self.char not in self.digits and self.char != '' and self.char != '\n' \
                         and self.char not in self.grouping_symbols and self.char not in self.delimiter_op:
+                    print("TESTTTTTTTTT " + self.char + " " + self.recognised_string)
                     self.__error()
                     break
                 # I have no idea how this condition fixed all this crap
@@ -332,17 +433,62 @@ class Lex:
 
                 return Token(self.recognised_string, "dig", self.current_line)
 
-
-class Syntax:
-
-    def __init__(self,path):
-        self.token = Lex(path)
-
     ##############################################################
     #                                                            #
     #                     Syntax Functions                       #
     #                                                            #
     ##############################################################
+
+
+class Syntax:
+    ST = list()
+    quad = Quad()
+    scope = Scope(0)
+    ST.append(scope)
+    quad_list = list()
+
+    def backpatch(self, list, label):
+        for i in list:
+            for n in self.quad_list:
+                if i == n.label:
+                    n.target = i
+
+    def add_new_scope(self, scope):
+
+        tmp_scope = self.ST[-1]
+        new_scope = Scope(tmp_scope.level + 1, tmp_scope)
+        self.ST.append(new_scope)
+
+
+    def remove_scope(self):
+        self.ST.pop()
+
+    def add_new_function(self, name):
+        tmp_scope = self.ST[-1]
+        new_scope = Scope(tmp_scope.level + 1)
+        self.add_new_scope(new_scope)
+        tmp_func = Function(name, -1)
+        self.ST[-1].add_entity(tmp_func)
+
+    def add_func_entity(self, name):
+        tmp_func = Function(name, -1)
+        self.ST[-1].add_entity(tmp_func)
+
+    def print_scopes(self,scope_list):
+        for i in scope_list:
+            if len(i.entities) != 0:
+                print(i.entities[0].name)
+
+    def print_quads(self, quad_list):
+        for i in range(len(quad_list)):
+            quad_list[i].print_quad(quad_list[i])
+
+
+    def add_new_var(self):
+       new_offset = self.scope[-1].entities[-1].offset + 4
+
+    def __init__(self, path):
+        self.token = Lex(path)
 
     def check_string_not(self, expected_word):
         """
@@ -378,6 +524,7 @@ class Syntax:
     def def_main_function(self):
         if self.check_string_not('def'):
             self.token.error('def')
+        tmp_tk = self.token.token_sneak_peak()
         if self.check_family_not('var'):
             self.token.error('var')
         if self.check_string_not('('):
@@ -388,6 +535,13 @@ class Syntax:
             self.token.error('Expected keyword \'(:')
         if self.check_string_not('#{'):
             self.token.error(' \'#{\'')
+
+        func_name = tmp_tk.recognised_string
+        self.quad.gen_quad('begin_block',func_name, '_', '_')
+        self.quad_list.append(self.quad)
+
+
+        self.add_new_function(func_name)
 
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -404,8 +558,15 @@ class Syntax:
             else:
                 break
         self.statements()
+
+        tmp_tk = self.token.token_sneak_peak()
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
+
+        x = self.quad
+        x.gen_quad('end_block', func_name, '_', '_')
+        self.quad_list.append(x)
+        self.ST.pop()
 
     def def_function(self):
         if self.check_string_not('def'):
@@ -421,6 +582,8 @@ class Syntax:
             self.token.error(':')
         if self.check_string_not('#{'):
             self.token.error('#{')
+
+        #
 
         while True:
             tmp_tk = self.token.token_sneak_peak()
@@ -452,8 +615,14 @@ class Syntax:
         self.id_list()
 
     def id_list(self):
+        tmp_tk = self.token.token_sneak_peak()
         if self.check_family_not('var'):
             self.token.error('var')
+
+        var_name = tmp_tk.recognised_string
+        new_var = Variable(var_name, self.ST[-1].get_offset)
+        self.ST[-1].add_entity(new_var)
+
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == ',':
@@ -602,13 +771,32 @@ class Syntax:
         tmp_token = self.token.token_sneak_peak()
         if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.optional_sign()
+
+        t1place = self.token.token_sneak_peak()
+        t1place = t1place.recognised_string
         self.term()
         while True:
             tmp_tk = self.token.token_sneak_peak()
-            if tmp_tk.recognised_string == '+' or tmp_tk.recognised_string == '-':
+            op_sign = tmp_tk.recognised_string
+            if op_sign == '+' or op_sign == '-':
                 self.token.next_token()
+                t2place = self.token.token_sneak_peak()
+                t2place = t2place.recognised_string
                 self.term()
+                w = self.quad.new_temp()
+                if op_sign == '+':
+                    tmp_quad = self.quad
+                    tmp_quad.gen_quad('+',t1place,t2place,w )
+                    self.quad_list.append(tmp_quad)
+                    w = int(t1place) + int(t2place)
+                else:
+                    self.quad.gen_quad('-', t1place, t2place, w)
+                    self.quad_list.append(self.quad)
+                    w = int(t1place) - int(t2place)
+                t1place = w
             else:
+                eplace = t1place
+                self.print_quads(self.quad_list)
                 break
 
     def term(self):
