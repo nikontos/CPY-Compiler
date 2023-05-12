@@ -4,6 +4,7 @@
 import os.path
 import string
 import sys
+import copy
 
 
 class Quad:
@@ -26,7 +27,7 @@ class Quad:
         print("Quad Label : " + self.label)
 
     def print_quad(self, quad):
-        print(str(quad.label) + ': ' + quad.operator + ' ' + quad.source1 + ' ' + quad.source2 + ' ' + quad.target)
+        print(str(quad.label) + ': ' + quad.operator + ' ' + quad.source1 + ' ' + quad.source2 + ' ' + str(quad.target))
 
     '''
     Modifies the quad object we created based on the parameters
@@ -447,6 +448,7 @@ class Syntax:
     ST.append(scope)
     quad_list = list()
 
+
     def backpatch(self, list, label):
         for i in list:
             for n in self.quad_list:
@@ -483,9 +485,12 @@ class Syntax:
         for i in range(len(quad_list)):
             quad_list[i].print_quad(quad_list[i])
 
-
     def add_new_var(self):
        new_offset = self.scope[-1].entities[-1].offset + 4
+
+    def push_new_quad(self, quad):
+        deep_copie = copy.copy(quad)
+        self.quad_list.append(deep_copie)
 
     def __init__(self, path):
         self.token = Lex(path)
@@ -537,10 +542,9 @@ class Syntax:
             self.token.error(' \'#{\'')
 
         func_name = tmp_tk.recognised_string
+
         self.quad.gen_quad('begin_block',func_name, '_', '_')
-        self.quad_list.append(self.quad)
-
-
+        self.push_new_quad(self.quad)
         self.add_new_function(func_name)
 
         while True:
@@ -563,9 +567,8 @@ class Syntax:
         if self.check_string_not('#}'):
             self.token.error('Expected keyword \'#}\'')
 
-        x = self.quad
-        x.gen_quad('end_block', func_name, '_', '_')
-        self.quad_list.append(x)
+        self.quad.gen_quad('end_block', func_name, '_', '_')
+        self.push_new_quad(self.quad)
         self.ST.pop()
 
     def def_function(self):
@@ -666,6 +669,8 @@ class Syntax:
             self.token.error('if or while')
 
     def assignment_stat(self):
+        var_name = self.token.token_sneak_peak()
+        var_name = var_name.recognised_string
         if self.check_family_not('var'):
             self.token.error('ID')
         elif self.check_string_not('='):
@@ -686,9 +691,15 @@ class Syntax:
             if self.check_string_not(';'):
                 self.token.error(';')
         else:
-            self.expression()
+            tmp = self.expression()
+            self.quad.gen_quad('=', tmp,'_',var_name )
+            self.push_new_quad(self.quad)
+
             if self.check_string_not(';'):
                 self.token.error(';')
+
+
+
 
     def print_stat(self):
         if self.check_string_not('print'):
@@ -772,49 +783,51 @@ class Syntax:
         if tmp_token.recognised_string == '+' or tmp_token.recognised_string == '-':
             self.optional_sign()
 
-        t1place = self.token.token_sneak_peak()
-        t1place = t1place.recognised_string
-        self.term()
+        t1 = self.term()
         while True:
             tmp_tk = self.token.token_sneak_peak()
             op_sign = tmp_tk.recognised_string
-            if op_sign == '+' or op_sign == '-':
+
+            if op_sign == '+':
                 self.token.next_token()
-                t2place = self.token.token_sneak_peak()
-                t2place = t2place.recognised_string
-                self.term()
+                t2 = self.term()
                 w = self.quad.new_temp()
-                if op_sign == '+':
-                    tmp_quad = self.quad
-                    tmp_quad.gen_quad('+',t1place,t2place,w )
-                    self.quad_list.append(tmp_quad)
-                    w = int(t1place) + int(t2place)
-                else:
-                    self.quad.gen_quad('-', t1place, t2place, w)
-                    self.quad_list.append(self.quad)
-                    w = int(t1place) - int(t2place)
-                t1place = w
+                self.quad.gen_quad('+', t1, t2, w)
+                self.push_new_quad(self.quad)
+                t1 = w
+            elif op_sign == '-':
+                self.token.next_token()
+                t2 = self.term()
+                w = self.quad.new_temp()
+                self.quad.gen_quad('-', t1, t2, w)
+                self.push_new_quad(self.quad)
+                t1 = w
             else:
-                eplace = t1place
-                self.print_quads(self.quad_list)
+                return t1
                 break
 
     def term(self):
-        self.factor()
+        f1 = self.factor()
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == '*' or tmp_tk.recognised_string == '//':
                 new_token = self.token.next_token()
                 if new_token.recognised_string != '*' and new_token.recognised_string != '//':
                     self.token.error('* or //')
-                self.factor()
+                f2 = self.factor()
+                w = copy.copy(self.quad.new_temp())
+                self.quad.gen_quad('*',f1,f2,w)
+                self.push_new_quad(self.quad)
+                f1 = w
             else:
+                return f1
                 break
 
     def factor(self):
         tmp_token = self.token.next_token()
         if tmp_token.recognised_string.isdigit():
-            pass
+            return tmp_token.recognised_string
+
             # self.token.error('INTEGER')
 
         if tmp_token.recognised_string == '(':
@@ -918,6 +931,10 @@ class Syntax:
             self.token.error(')')
         elif self.check_string_not(';'):
             self.token.error(';')
+
+        self.print_quads(self.quad_list)
+
+    #########################################################################
 
     ##############################################################
     #                                                            #
