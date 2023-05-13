@@ -810,30 +810,37 @@ class Syntax:
         f1 = self.factor()
         while True:
             tmp_tk = self.token.token_sneak_peak()
-            if tmp_tk.recognised_string == '*' or tmp_tk.recognised_string == '//':
+            mul_op = tmp_tk.recognised_string
+            if mul_op == '*' or mul_op == '//':
                 new_token = self.token.next_token()
                 if new_token.recognised_string != '*' and new_token.recognised_string != '//':
                     self.token.error('* or //')
                 f2 = self.factor()
                 w = copy.copy(self.quad.new_temp())
-                self.quad.gen_quad('*',f1,f2,w)
-                self.push_new_quad(self.quad)
-                f1 = w
+                if mul_op == '*':
+                    self.quad.gen_quad('*',f1,f2,w)
+                    self.push_new_quad(self.quad)
+                    f1 = w
+                elif mul_op == '//':
+                    self.quad.gen_quad('//', f1, f2, w)
+                    self.push_new_quad(self.quad)
+                    f1 = w
             else:
                 return f1
                 break
 
     def factor(self):
         tmp_token = self.token.next_token()
-        if tmp_token.recognised_string.isdigit():
+        if tmp_token.recognised_string.isdigit() or tmp_token.recognised_string in string.ascii_letters or tmp_token.family == 'var':
             return tmp_token.recognised_string
 
             # self.token.error('INTEGER')
 
         if tmp_token.recognised_string == '(':
-            self.expression()
+            exp_val = self.expression()
             if self.check_string_not(')'):
                 self.token.error(')')
+            return exp_val
         elif tmp_token.family == 'var':
             self.idtail()
 
@@ -933,7 +940,8 @@ class Syntax:
             self.token.error(';')
 
         self.print_quads(self.quad_list)
-
+        print("--")
+        self.print_scopes(self.ST)
     #########################################################################
 
     ##############################################################
