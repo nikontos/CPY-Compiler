@@ -213,7 +213,7 @@ class Lex:
     alphabet = string.ascii_letters + '_'
     grouping_symbols = ['(', ')', '{', '}', '#{', '#}', '[', ']']
     num_op = ['+', '-', '*', '//']
-    relation_op = ['<', '>', '!=', '<=', '>=', '==']
+    relation_op = ['<', '>', '!=', '<=', '>=', '==', 'not']
     delimiter_op = [';', ',', ':', ';']
 
     def __init__(self, file_name):
@@ -442,18 +442,16 @@ class Lex:
 
 
 class Syntax:
-    ST = list()
+    ST, quad_list, cond_true, cond_false = list(), list(), list(), list()
     quad = Quad()
     scope = Scope(0)
     ST.append(scope)
-    quad_list = list()
-
 
     def backpatch(self, list, label):
         for i in list:
-            for n in self.quad_list:
-                if i == n.label:
-                    n.target = i
+            for quad in self.quad_list:
+                if quad.label == i:
+                    quad.target = label
 
     def add_new_scope(self, scope):
 
@@ -482,6 +480,7 @@ class Syntax:
                 print(i.entities[0].name)
 
     def print_quads(self, quad_list):
+        print("RANGE : " + str(len(self.quad_list)))
         for i in range(len(quad_list)):
             quad_list[i].print_quad(quad_list[i])
 
@@ -690,6 +689,8 @@ class Syntax:
                 self.token.error(')')
             if self.check_string_not(';'):
                 self.token.error(';')
+            self.quad.gen_quad('in',var_name, '_','_')
+            self.push_new_quad(self.quad)
         else:
             tmp = self.expression()
             self.quad.gen_quad('=', tmp,'_',var_name )
@@ -724,12 +725,14 @@ class Syntax:
             self.token.error(';')
 
     def if_stat(self):
+        if_list = list()
         if self.check_string_not('if'):
             self.token.error('if')
         if self.check_string_not('('):
             self.token.error('(')
 
-        self.condition()
+        (if_true, if_false) = self.condition()
+        self.backpatch(if_true, self.quad.next_quad())
         if self.check_string_not(')'):
             self.token.error(')')
         if self.check_string_not(':'):
@@ -739,10 +742,20 @@ class Syntax:
         if tmp_tk.recognised_string == '#{':
             self.token.next_token()
             self.statements()
+            if_list = self.quad.make_list(self.quad.next_quad())
+            self.push_new_quad(self.quad)
+            self.quad.gen_quad('jump', '_','_','_')
+            self.push_new_quad(self.quad)
+            self.backpatch(if_false, self.quad.next_quad())
             if self.check_string_not('#}'):
                 self.token.error('#} @IF statement')
         else:
             self.statement()
+            if_list = self.quad.make_list(self.quad.next_quad())
+            self.quad.gen_quad('jump', '_', '_', '_')
+            self.push_new_quad(self.quad)
+            print(self.quad.next_quad())
+            self.backpatch(if_false, self.quad.next_quad())
 
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == 'else':
@@ -759,24 +772,33 @@ class Syntax:
             else:
                 self.statement()
 
+        self.backpatch(if_list, self.quad.next_quad())
+
     def while_stat(self):
         if self.check_string_not('while'):
             self.token.error('while')
+        cond_quad = self.quad.next_quad()
         if self.check_string_not('('):
             self.token.error(')')
-        self.condition()
+        (cond_true,cond_false) = self.condition()
         if self.check_string_not(')'):
             self.token.error(')')
         if self.check_string_not(':'):
             self.token.error(':')
+        self.backpatch(cond_true,self.quad.next_quad())
         tmp_tk = self.token.token_sneak_peak()
         if tmp_tk.recognised_string == '#{':
             self.token.next_token()
             self.statements()
+            self.quad.gen_quad('jump','_','_',cond_quad)
+            self.backpatch(cond_false,self.quad.next_quad())
             if self.check_string_not('#}'):
                 self.token.error('#} @WHILE Statement')
         else:
             self.statement()
+            self.quad.gen_quad('jump', '_', '_', cond_quad)
+            self.push_new_quad(self.quad)
+            self.backpatch(cond_false, self.quad.next_quad())
 
     def expression(self):
         tmp_token = self.token.token_sneak_peak()
@@ -838,7 +860,9 @@ class Syntax:
 
         if tmp_token.recognised_string == '(':
             exp_val = self.expression()
-            if self.check_string_not(')'):
+            tmp_token = self.token.token_sneak_peak()
+            #print(tmp_token)
+            if self.check_string_not(')') and (tmp_token.recognised_string not in self.token.relation_op):
                 self.token.error(')')
             return exp_val
         elif tmp_token.family == 'var':
@@ -871,22 +895,32 @@ class Syntax:
             self.token.error('Less + or - operations')
 
     def condition(self):
-        self.bool_term()
+        (b_true, b_false) = self.bool_term()
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == 'or':
-                self.bool_term()
+                self.token.next_token()
+                self.backpatch(b_false, self.quad.next_quad())
+                (b_true2, b_false2) = self.bool_term()
+                b_true = self.quad.merge_list(b_true,b_true2)
+                b_false = b_false2
             else:
                 break
+        return b_true, b_false
 
     def bool_term(self):
-        self.bool_factor()
+        ( q_true, q_false ) = self.bool_factor()
         while True:
             tmp_tk = self.token.token_sneak_peak()
             if tmp_tk.recognised_string == 'and':
-                self.bool_factor()
+                self.token.next_token()
+                self.backpatch(q_true, self.quad.next_quad())
+                (q_true2,q_false2) = self.bool_factor()
+                q_false = self.quad.merge_list(q_false,q_false2)
+                q_true = q_true2
             else:
                 break
+        return (q_true,q_false)
 
     def bool_factor(self):
         tmp_tk = self.token.token_sneak_peak()
@@ -894,20 +928,30 @@ class Syntax:
             self.token.next_token()
             if self.check_string_not('['):
                 self.token.error('[')
-            self.condition()
+            (r_true,r_false) = self.condition()
             if self.check_string_not(']'):
                 self.token.error(']')
+            return (r_true, r_false)
         elif tmp_tk.recognised_string == '[':
             self.token.next_token()
-            self.condition()
+            (r_true, r_false) = self.condition()
             if self.check_string_not(']'):
                 self.token.error(']')
+            return (r_true, r_false)
         else:
-            self.expression()
+            l_term = self.expression()
             tmp_tk = self.token.next_token()
             if tmp_tk.recognised_string not in self.token.relation_op:
                 self.token.error('Rel OP')
-            self.expression()
+            r_term = self.expression()
+            r_true = self.quad.make_list(self.quad.next_quad())
+            self.quad.gen_quad(tmp_tk.recognised_string, l_term, r_term, '_')
+            self.push_new_quad(self.quad)
+            r_false = self.quad.make_list(self.quad.next_quad())
+            self.quad.gen_quad('jump', '_','_','_')
+            self.push_new_quad(self.quad)
+            return (r_true, r_false)
+
 
     def call_main_part(self):
         if self.check_string_not('if'):
