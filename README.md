@@ -7,4 +7,4 @@ Don't try to copy-pase/turn-in the code as the lecturer makes small changes ever
 
 The lexical and syntax analyzers are working
 
-There migh be a few bugs but this is to help students that are doing the course to help em get started!
+There migh be a few bugs but this is to help students that are doing the course to get em started!
